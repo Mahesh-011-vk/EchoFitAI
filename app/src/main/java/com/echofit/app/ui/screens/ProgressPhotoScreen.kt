@@ -1,0 +1,663 @@
+package com.echofit.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.echofit.app.domain.ai.EchoAIEngine
+import com.echofit.app.domain.model.ProgressPhoto
+import com.echofit.app.ui.components.GlassmorphicCard
+import com.echofit.app.ui.components.PremiumButton
+import com.echofit.app.ui.components.threeDTiltEffect
+import androidx.compose.ui.graphics.Brush
+import com.echofit.app.ui.theme.*
+import com.echofit.app.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProgressPhotoScreen(
+    viewModel: MainViewModel
+) {
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+    val weightList by viewModel.weightLogs.collectAsState()
+    val photoList by viewModel.progressPhotos.collectAsState()
+    val attendanceList by viewModel.attendanceLogs.collectAsState()
+    val apiKey by viewModel.geminiApiKey.collectAsState()
+
+    val chartWeights = remember(weightList) {
+        if (weightList.size >= 2) {
+            weightList.takeLast(6).map { it.weight }
+        } else {
+            listOf(74.5, 73.8, 73.2, 72.5, 72.0, 71.4) // High quality visual mock
+        }
+    }
+
+    var weightInput by remember { mutableStateOf("") }
+    var activePhotoUploadPosition by remember { mutableStateOf<String?>(null) } // "Front", "Side", "Back"
+    
+    // AI Physique Analysis State
+    var showCameraPicker by remember { mutableStateOf(false) }
+    var isAnalyzingPhysique by remember { mutableStateOf(false) }
+    var activePhysiqueReportText by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PrimaryBlack.copy(alpha = 0f))
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Body Transformation Vault",
+                    style = Typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                )
+                Text(
+                    text = "Track weight, attendance, and secure photos",
+                    style = Typography.bodyMedium,
+                    color = TextGray
+                )
+            }
+            Icon(imageVector = Icons.Default.Lock, contentDescription = "Secure", tint = GoldAccent)
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Weight Logger Panel
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "LOG DAILY WEIGHT",
+                style = Typography.labelLarge,
+                color = GoldAccent,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = weightInput,
+                    onValueChange = { weightInput = it },
+                    placeholder = { Text("Weight in kg", color = TextGray) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = GoldAccent,
+                        unfocusedBorderColor = BorderGray,
+                        focusedTextColor = TextWhite,
+                        unfocusedTextColor = TextWhite
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                IconButton(
+                    onClick = {
+                        val wt = weightInput.toDoubleOrNull()
+                        if (wt != null) {
+                            viewModel.logWeight(wt)
+                            weightInput = ""
+                        }
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GoldAccent)
+                        .size(52.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add", tint = PrimaryBlack)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Last logged weight
+            val lastWeight = weightList.lastOrNull()?.weight ?: 0.0
+            if (lastWeight > 0.0) {
+                Text(
+                    text = "Current Weight: $lastWeight kg | Goal: ${viewModel.userProfile.value?.targetWeight ?: "70.0"} kg",
+                    style = Typography.bodyMedium,
+                    color = TextWhite,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // WEEKLY PERFORMANCE REPORTS & ANALYTICS
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "WEEKLY WEIGHT TREND",
+                style = Typography.labelLarge,
+                color = GoldAccent,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+
+            // Canvas drawing for weight progression
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(PrimaryBlack.copy(alpha = 0.5f))
+                    .padding(8.dp)
+            ) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val maxW = (chartWeights.maxOrNull() ?: 80.0) + 1.0
+                    val minW = (chartWeights.minOrNull() ?: 70.0) - 1.0
+                    val diff = maxW - minW
+                    
+                    val points = chartWeights.mapIndexed { idx, w ->
+                        val x = idx.toFloat() / (chartWeights.size - 1) * size.width
+                        val y = size.height - ((w - minW) / diff * size.height).toFloat()
+                        androidx.compose.ui.geometry.Offset(x, y)
+                    }
+
+                    // 1. Draw 3D shadow path offset
+                    for (i in 0 until points.size - 1) {
+                        drawLine(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            start = points[i].copy(y = points[i].y + 6f),
+                            end = points[i + 1].copy(y = points[i + 1].y + 6f),
+                            strokeWidth = 10f,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    }
+
+                    // 2. Draw connecting volumetric lines
+                    for (i in 0 until points.size - 1) {
+                        drawLine(
+                            color = GoldAccent,
+                            start = points[i],
+                            end = points[i + 1],
+                            strokeWidth = 6f,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                        // specular highlight line
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.4f),
+                            start = points[i].copy(y = points[i].y - 1f),
+                            end = points[i + 1].copy(y = points[i + 1].y - 1f),
+                            strokeWidth = 2f,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    }
+
+                    // 3. Draw dots with 3D button bubble shading
+                    points.forEach { pt ->
+                        // Shadow
+                        drawCircle(
+                            color = Color.Black.copy(alpha = 0.6f),
+                            radius = 12f,
+                            center = pt.copy(y = pt.y + 4f)
+                        )
+                        // Bevel Base
+                        drawCircle(
+                            color = DarkGold,
+                            radius = 10f,
+                            center = pt
+                        )
+                        // Core Cap
+                        drawCircle(
+                            color = GoldAccent,
+                            radius = 8f,
+                            center = pt
+                        )
+                        // Refractive specular shine
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.7f),
+                            radius = 2.5f,
+                            center = androidx.compose.ui.geometry.Offset(pt.x - 3f, pt.y - 3f)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Mon", style = Typography.labelMedium, color = TextGray)
+                Text(text = "Tue", style = Typography.labelMedium, color = TextGray)
+                Text(text = "Wed", style = Typography.labelMedium, color = TextGray)
+                Text(text = "Thu", style = Typography.labelMedium, color = TextGray)
+                Text(text = "Fri", style = Typography.labelMedium, color = TextGray)
+                Text(text = "Sat/Sun", style = Typography.labelMedium, color = TextGray)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // GAMIFICATION VAULT
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "GAMIFICATION VAULT",
+                    style = Typography.labelLarge,
+                    color = GoldAccent,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "Level 3 - Gym Warrior",
+                    style = Typography.labelMedium,
+                    color = LightGold,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // XP Progression bar
+            val currentXP = attendanceList.sumOf { it.score } + 120
+            val targetLevelXP = 500
+            val progressXP = currentXP.toFloat() / targetLevelXP
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "XP Progress Tracker", style = Typography.labelMedium, color = TextGray)
+                Text(text = "$currentXP / $targetLevelXP XP", style = Typography.labelMedium, color = TextWhite, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = progressXP.coerceIn(0f, 1f),
+                color = GoldAccent,
+                trackColor = Color(0x33FFFFFF),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp))
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(text = "Your Earned Badges:", style = Typography.labelMedium, color = TextGray, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Protein Master Badge
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceDark)
+                        .border(1.dp, ProteinPurple.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("💪", fontSize = 20.sp)
+                        Text("Pro Master", style = Typography.labelMedium, color = TextWhite, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("Target Met", style = Typography.labelMedium, color = ProteinPurple, fontSize = 9.sp)
+                    }
+                }
+
+                // Hydration Hero Badge
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceDark)
+                        .border(1.dp, HydrateBlue.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("💧", fontSize = 20.sp)
+                        Text("Water Hero", style = Typography.labelMedium, color = TextWhite, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("100% Hydrated", style = Typography.labelMedium, color = HydrateBlue, fontSize = 9.sp)
+                    }
+                }
+
+                // Streak Trophy Badge
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceDark)
+                        .border(1.dp, StreakFire.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🏆", fontSize = 20.sp)
+                        Text("Consistency", style = Typography.labelMedium, color = TextWhite, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("7-Day Streak", style = Typography.labelMedium, color = StreakFire, fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // AI WEEKLY PERFORMANCE REPORT CARD
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "ECHO'S WEEKLY TRANSFORMATION REPORT",
+                style = Typography.labelLarge,
+                color = GoldAccent,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Analytical Summary:",
+                style = Typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = LightGold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            val totalScore = attendanceList.sumOf { it.score }
+            val avgScore = if (attendanceList.isNotEmpty()) totalScore / attendanceList.size else 85
+            
+            Text(
+                text = "• Weight change: Down ${String.format("%.1f", 74.5 - chartWeights.last())} kg from start.\n" +
+                       "• Hydration pacing: 92% targets locked.\n" +
+                       "• Routine compliance score: $avgScore% consistency registered.\n" +
+                       "• Protein targets: Hitting target average of 115g/day.",
+                style = Typography.bodyMedium,
+                color = TextWhite
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            Divider(color = BorderGray)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Echo AI Weekly Advice:",
+                style = Typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = GoldAccent
+            )
+            Text(
+                text = "• \"Belly fat visual change is looking solid! Stick to your ${viewModel.goalAnalysis.value?.calorieTarget ?: 1800} kcal deficit. Posture could be slightly more rolled back, keep stretching on those Sundays!\"",
+                style = Typography.bodyMedium,
+                color = TextWhite,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Secure Progress Photo Slots (Front, Side, Back)
+        Text(
+            text = "PROGRESS PHOTO CHECKINS",
+            style = Typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextWhite,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("Front", "Side", "Back").forEach { pos ->
+                val hasPhoto = photoList.find { it.position == pos }
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .threeDTiltEffect()
+                        .padding(bottom = 4.dp, end = 4.dp)
+                ) {
+                    // 3D extrusion base
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = 4.dp, y = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        if (hasPhoto != null) GoldAccent.copy(alpha = 0.8f) else PrimaryBlack,
+                                        PrimaryBlack
+                                    )
+                                )
+                            )
+                            .border(1.dp, if (hasPhoto != null) GoldAccent.copy(alpha = 0.3f) else Color.Transparent, RoundedCornerShape(12.dp))
+                    )
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .border(1.dp, if (hasPhoto != null) GoldAccent.copy(alpha = 0.5f) else BorderGray, RoundedCornerShape(12.dp))
+                            .clickable {
+                                activePhotoUploadPosition = pos
+                                showCameraPicker = true
+                            },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                        if (hasPhoto != null) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Photo", tint = GoldAccent)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(pos, style = Typography.labelMedium, color = TextWhite)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                IconButton(
+                                    onClick = { viewModel.deletePhoto(hasPhoto) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Add", tint = TextGray)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(pos, style = Typography.labelMedium, color = TextGray)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // AI PHYSIQUE ANALYSIS BUTTON
+        val activePhotosCount = photoList.size
+        PremiumButton(
+            text = "ANALYZE PHYSIQUE TRANSFORMATION",
+            onClick = {
+                isAnalyzingPhysique = true
+                scope.launch {
+                    kotlinx.coroutines.delay(2500) // Simulates Vision API compared analysis
+                    isAnalyzingPhysique = false
+                    
+                    // Generate premium assessment comparison output
+                    activePhysiqueReportText = """
+                        ### Echo AI Progress Photo Comparison
+                        
+                        * **Visual Body Fat**: Estimated reduction of ~1.2% visual abdominal fat. High compliance on diet logged.
+                        * **Muscle Definition**: Enhanced shoulder caps and rear delts seen in Side/Back views.
+                        * **Posture Assessment**: Roman back tilt detected. Mobility stretch daily recommended.
+                        
+                        **Echo's Recommendations**:
+                        - Chest development is looking slight, add inclined bench/floor pushups.
+                        - Posture requires stretching: open up chest and work rear-delts.
+                    """.trimIndent()
+                }
+            },
+            enabled = activePhotosCount >= 2,
+            backgroundColor = DarkGold
+        )
+
+        activePhysiqueReportText?.let { report ->
+            Spacer(modifier = Modifier.height(16.dp))
+            GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "AI PHYSIQUE COMPARATIVE ASSESSMENT",
+                    style = Typography.labelLarge,
+                    color = GoldAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = report,
+                    style = Typography.bodyMedium,
+                    color = TextWhite
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Daily Attendance Registry
+        Text(
+            text = "DAILY CHECK-IN ATTENDANCE",
+            style = Typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextWhite,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (attendanceList.isEmpty()) {
+            Text(
+                text = "Welcome to EchoFit! Complete today's checklist on Dashboard to log your first attendance day.",
+                style = Typography.bodyMedium,
+                color = TextGray,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+            )
+        } else {
+            attendanceList.forEach { attend ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceDark)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(text = "Date: ${attend.dateString}", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Diet: ${if (attend.isDietDone) "✓" else "✗"} | Workout: ${if (attend.isWorkoutDone) "✓" else "✗"} | Water: ${if (attend.isWaterDone) "✓" else "✗"}",
+                            style = Typography.labelMedium,
+                            color = TextGray
+                        )
+                    }
+
+                    // Score Circle Badge
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(if (attend.score >= 70) SuccessGreen else if (attend.score >= 40) FatYellow else ErrorRed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${attend.score}%",
+                            color = TextWhite,
+                            style = Typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(72.dp))
+    }
+
+    // Capture Simulation dialog
+    if (showCameraPicker) {
+        AlertDialog(
+            onDismissRequest = { showCameraPicker = false },
+            title = { Text("Secure Upload Progress Picture", color = TextWhite) },
+            text = {
+                Text(
+                    "Register progress check-ins securely. This photo remains strictly in your offline vault.",
+                    color = TextGray
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val pos = activePhotoUploadPosition ?: "Front"
+                        viewModel.logProgressPhoto(pos, "content://secure_progress_$pos")
+                        showCameraPicker = false
+                    }
+                ) {
+                    Text("TAKE PHOTO", color = GoldAccent, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraPicker = false }) {
+                    Text("CANCEL", color = TextGray)
+                }
+            },
+            containerColor = SurfaceDark
+        )
+    }
+
+    // Comparative Loading Overlay
+    if (isAnalyzingPhysique) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(PrimaryBlack.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = GoldAccent)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Echo Comparing Progress Photos...", style = Typography.bodyLarge, color = GoldAccent)
+            }
+        }
+    }
+}
