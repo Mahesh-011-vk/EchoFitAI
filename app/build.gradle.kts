@@ -80,6 +80,7 @@ dependencies {
 
     // Image loading (Coil)
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-svg:2.5.0")
 
     // Google Generative AI (Gemini SDK)
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")

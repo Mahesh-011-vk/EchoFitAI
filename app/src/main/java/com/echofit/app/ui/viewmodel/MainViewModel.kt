@@ -18,7 +18,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: EchoFitRepository = (application as EchoFitApplication).repository
 
     // UI Navigation state
-    var selectedTab = MutableStateFlow("Dashboard")
+    var selectedTab = MutableStateFlow("HOME")
 
     // Core Domain data flows
     val userProfile = repository.getUserProfile().stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -45,7 +45,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val currentWorkoutPlan: StateFlow<WorkoutPlan?> = userProfile.map { profile ->
-        profile?.let { EchoAIEngine.generateWorkoutPlan(it) }
+        profile?.let { 
+            val dayOfYear = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)
+            EchoAIEngine.generateWorkoutPlan(it, dayIndex = dayOfYear)
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {

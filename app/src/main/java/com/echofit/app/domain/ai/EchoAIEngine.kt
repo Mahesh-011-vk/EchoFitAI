@@ -264,6 +264,8 @@ object EchoAIEngine {
             else -> "Core & Cardio"
         }
 
+
+
         val gymExercises = when (splitDay) {
             1 -> listOf(
                 Exercise("g1", "Incline Dumbbell Press", 4, "8-12", "Upper Chest", "Dumbbells, Incline Bench", 
@@ -277,7 +279,13 @@ object EchoAIEngine {
                     listOf("Using momentum to swing weights", "Lifting shoulders up"), "Resistance Band Lateral Raises", "Cable Lateral Raises"),
                 Exercise("g4", "Triceps Cable Pushdowns", 3, "12-15", "Triceps", "Cable Machine",
                     listOf("Keep elbows pinned to ribcage", "Extend elbows downward completely", "Slowly return to start"),
-                    listOf("Letting elbows flare or travel forward", "Hunching forward"), "Bench Dips", "Triceps Kickbacks")
+                    listOf("Letting elbows flare or travel forward", "Hunching forward"), "Bench Dips", "Triceps Kickbacks"),
+                Exercise("g13", "Dumbbell Chest Flyes", 3, "10-12", "Chest", "Dumbbells, Flat Bench", 
+                    listOf("Lie flat on bench holding dumbbells above chest", "Lower weights to side in wide arc keeping elbow bent", "Squeeze chest to return weights to top"),
+                    listOf("Unbending elbows too much placing stress on joints", "Clashing weights at the top"), "Flat Bench Press", "Cable Chest Flyes"),
+                Exercise("g14", "Dumbbell Triceps Extensions", 3, "10-12", "Triceps", "Dumbbells", 
+                    listOf("Hold dumbbell overhead with both hands", "Lower weight behind head by bending elbows", "Extend elbows to return to top"),
+                    listOf("Flaring elbows outward excessively", "Lowering weight too quickly"), "Triceps Cable Pushdowns", "Lying Triceps Extensions")
             )
             2 -> listOf(
                 Exercise("g5", "Pull-Ups", 4, "Max", "Lats / Back Width", "Pull-Up Bar",
@@ -288,7 +296,16 @@ object EchoAIEngine {
                     listOf("Leaning forward and backward excessively", "Pulling with wrists"), "Dumbbell Rows", "Weighted Pull-ups"),
                 Exercise("g7", "Barbell Biceps Curls", 3, "10-12", "Biceps", "Barbell",
                     listOf("Keep elbows pinned", "Curl bar to chest level", "Control the lowering phase"),
-                    listOf("Swinging torso to cheat weight", "Short-changing lower range"), "Dumbbell Curls", "Spider Curls")
+                    listOf("Swinging torso to cheat weight", "Short-changing lower range"), "Dumbbell Curls", "Spider Curls"),
+                Exercise("g15", "Wide-Grip Lat Pulldowns", 4, "10-12", "Lats", "Cable Machine", 
+                    listOf("Sit on machine, pull bar to upper chest", "Squeeze shoulder blades and lats", "Slowly return to starting position"),
+                    listOf("Pulling bar behind neck", "Leaning back too far using bodyweight"), "Pull-Ups", "Dumbbell Rows"),
+                Exercise("g16", "Dumbbell Hammer Curls", 3, "12-15", "Biceps", "Dumbbells", 
+                    listOf("Stand holding dumbbells with palms facing each other", "Curl weights up keeping elbows pinned", "Slowly lower to start"),
+                    listOf("Swinging body to lift weight", "Not extending arm fully at bottom"), "Barbell Biceps Curls", "Spider Curls"),
+                Exercise("g17", "Cable Face Pulls", 3, "15-20", "Rear Delts", "Cable Machine, Rope", 
+                    listOf("Pull rope towards forehead, flaring elbows", "Squeeze shoulder blades at back of motion", "Slowly control return"),
+                    listOf("Pulling down with hands instead of elbows", "Using too much weight causing body swing"), "Dumbbell Rear Delt Flyes", "Reverse Pec Deck")
             )
             3 -> listOf(
                 Exercise("g8", "Barbell Back Squats", 4, "6-10", "Quads & Glutes", "Barbell, Squat Rack",
@@ -299,7 +316,16 @@ object EchoAIEngine {
                     listOf("Rounding lower back", "Squatting the weight down"), "Glute Bridges", "Deficit Deadlifts"),
                 Exercise("g10", "Dumbbell Lunges", 3, "10 per leg", "Legs / Balance", "Dumbbells",
                     listOf("Step forward, lower rear knee near floor", "Keep front shin upright", "Push back to starting spot"),
-                    listOf("Stepping in a straight tightrope line", "Knee shooting past toes"), "Bodyweight Lunges", "Bulgarian Split Squats")
+                    listOf("Stepping in a straight tightrope line", "Knee shooting past toes"), "Bodyweight Lunges", "Bulgarian Split Squats"),
+                Exercise("g18", "Machine Leg Extensions", 3, "12-15", "Quads", "Leg Extension Machine", 
+                    listOf("Sit back on machine, extend knees straight", "Squeeze quads at top peak", "Slowly lower back down"),
+                    listOf("Slamming plates at bottom", "Locking knees too aggressively"), "Goblet Squats", "Sissy Squats"),
+                Exercise("g19", "Lying Leg Curls", 3, "12-15", "Hamstrings", "Leg Curl Machine", 
+                    listOf("Lie flat, curl pads towards glutes", "Squeeze hamstrings at top", "Control lowering phase"),
+                    listOf("Lifting hips off pad", "Rushing lowering phase"), "Romanian Deadlifts", "Glute Bridges"),
+                Exercise("g20", "Standing Calf Raises", 4, "15-20", "Calves", "Calf Raise Machine", 
+                    listOf("Step on edge, drop heels down", "Push up on toes fully", "Pause and stretch at bottom"),
+                    listOf("Bouncing reps too fast", "Bent knees redirecting force"), "Seated Calf Raises", "Single-Leg Calf Raises")
             )
             else -> listOf(
                 Exercise("g11", "Hanging Leg Raises", 3, "10-15", "Lower Abs", "Pull-up Bar",
@@ -307,7 +333,16 @@ object EchoAIEngine {
                     listOf("Swinging back and forth", "Using hip flexors only"), "Lying Leg Raises", "Toes to Bar"),
                 Exercise("g12", "Plank Hold", 3, "60 seconds", "Core Stability", "Floor",
                     listOf("Rest on forearms, brace body straight", "Squeeze glutes and core", "Keep neck neutral"),
-                    listOf("Letting hips sag down", "Poking butt in the air"), "Plank on Knees", "Weighted Plank")
+                    listOf("Letting hips sag down", "Poking butt in the air"), "Plank on Knees", "Weighted Plank"),
+                Exercise("g21", "Weighted Russian Twists", 3, "20 reps", "Obliques", "Medicine Ball / Dumbbell", 
+                    listOf("Sit with knees bent, feet off ground", "Twist torso to tap weight side to side", "Keep core engaged throughout"),
+                    listOf("Rounding back excessively", "Moving only arms instead of twisting torso"), "Bicycle Crunches", "Side Plank Twists"),
+                Exercise("g22", "Cable Woodchops", 3, "12 per side", "Core / Obliques", "Cable Machine", 
+                    listOf("Pull cable diagonally across body in chop motion", "Pivot back foot and engage core", "Control return to high anchor"),
+                    listOf("Using only arms to pull", "Rotating hips too fast"), "Russian Twists", "Plank Twists"),
+                Exercise("g23", "Elliptical HiiT Sprints", 1, "15 mins", "Cardio", "Elliptical", 
+                    listOf("Warm up 3 mins", "Sprint at max resistance 30s", "Slow recovery pace 60s", "Repeat 10 cycles"),
+                    listOf("Slouching over handrails", "Failing to change speed cycles"), "Rowing Machine Sprints", "Treadmill Run")
             )
         }
 
@@ -324,7 +359,13 @@ object EchoAIEngine {
                     listOf("Flaring elbows out", "Rounding lower spine"), "Standard Pushups", "Handstand Pushups"),
                 Exercise("h4", "Bench/Chair Dips", 3, "12-15", "Triceps", "Chair",
                     listOf("Place hands on chair edge", "Slide butt off, lower hips down", "Press up extending elbows"),
-                    listOf("Letting body drift away from chair", "Going too deep hurting shoulders"), "Knee Pushups", "Weighted Dips")
+                    listOf("Letting body drift away from chair", "Going too deep hurting shoulders"), "Knee Pushups", "Weighted Dips"),
+                Exercise("h13", "Diamond Pushups", 3, "8-12", "Chest & Triceps", "Floor", 
+                    listOf("Place hands together forming diamond shape", "Lower chest to hands keeping body straight", "Push up extending elbows completely"),
+                    listOf("Flaring elbows outward", "Sagging lower back"), "Standard Pushups", "Knee Diamond Pushups"),
+                Exercise("h14", "Backpack Chest Flyes", 3, "12-15", "Chest", "Backpack, Floor", 
+                    listOf("Lie flat on floor, hold pack straps", "Open arms wide in arc to floor", "Squeeze chest to return to top"),
+                    listOf("Unbending elbows placing stress on joints", "Lifting shoulders off floor"), "Standard Pushups", "Door Band Flyes")
             )
             2 -> listOf(
                 Exercise("h5", "Backpack Rows", 4, "12-15", "Mid Back", "Backpack with weights",
@@ -335,7 +376,16 @@ object EchoAIEngine {
                     listOf("Letting bands snap back", "Bending chest forward"), "Towel Lat Pulls", "Standard Pull-ups"),
                 Exercise("h7", "Backpack Biceps Curls", 3, "12-15", "Biceps", "Backpack",
                     listOf("Hold backpack handles", "Perform standard curl slowly", "Fully extend arms at bottom"),
-                    listOf("Swinging elbows back", "Rushing lowering phase"), "Resistance Band Curls", "Concentration Curls")
+                    listOf("Swinging elbows back", "Rushing lowering phase"), "Resistance Band Curls", "Concentration Curls"),
+                Exercise("h15", "Banded Face Pulls", 3, "15-20", "Rear Delts", "Resistance Band", 
+                    listOf("Anchor band chest-high on door", "Pull handles towards ears, opening elbows", "Squeeze shoulder blades back"),
+                    listOf("Yanking band with shoulder shrugs", "Letting band snap back too fast"), "Reverse Snow Angels", "Banded Rear Delt Flyes"),
+                Exercise("h16", "Reverse Snow Angels", 3, "12-15", "Upper Back", "Floor", 
+                    listOf("Lie facedown, chest slightly off floor", "Sweep arms from hips to overhead in wide arc", "Squeeze upper back throughout"),
+                    listOf("Lifting head too high straining neck", "Allowing hands to touch ground"), "Backpack Rows", "Supermans"),
+                Exercise("h17", "Banded Biceps Hammer Curls", 3, "15-20", "Biceps", "Resistance Band", 
+                    listOf("Step on band, hold handles vertically", "Curl up keeping elbows pinned to ribs", "Slowly lower to start"),
+                    listOf("Swinging elbows forward", "Not controlling lower range"), "Backpack Curls", "Towel Curls")
             )
             3 -> listOf(
                 Exercise("h8", "Air Squats", 4, "20-25", "Quads & Glutes", "Bodyweight",
@@ -346,7 +396,16 @@ object EchoAIEngine {
                     listOf("Front knee caving", "Leaning too far back"), "Bodyweight Lunges", "Weighted Split Squats"),
                 Exercise("h10", "Glute Bridges", 3, "15-20", "Glutes & Hamstrings", "Floor",
                     listOf("Lie on back, knees bent", "Drive hips up squeezing glutes", "Slowly lower"),
-                    listOf("Arching lower back instead of squeezing glutes", "Feet too far forward"), "Single Leg Bridges", "Weighted Glute Bridges")
+                    listOf("Arching lower back instead of squeezing glutes", "Feet too far forward"), "Single Leg Bridges", "Weighted Glute Bridges"),
+                Exercise("h18", "Single-Leg Calf Raises", 3, "15 per leg", "Calves", "Floor / Step", 
+                    listOf("Stand on one foot near wall for balance", "Push up high on toes", "Pause and stretch heel at bottom"),
+                    listOf("Bouncing reps", "Bending knee to push"), "Calf Raises", "Banded Calf Raises"),
+                Exercise("h19", "Single-Leg Glute Bridges", 3, "12 per leg", "Glutes & Hamstrings", "Floor", 
+                    listOf("Lie on back, bend one knee, raise other leg", "Drive hips up pushing through heel", "Squeeze glute and lower slowly"),
+                    listOf("Arching lower back", "Not squeezing glute at top"), "Glute Bridges", "Banded Glute Bridges"),
+                Exercise("h20", "Wall Sit Hold", 3, "45 seconds", "Quads", "Wall", 
+                    listOf("Press back flat against wall", "Slide down until thighs are parallel to floor", "Hold position bracing core"),
+                    listOf("Placing hands on knees", "Sliding knees past toes"), "Air Squats", "Kossack Squats")
             )
             else -> listOf(
                 Exercise("h11", "Bicycle Crunches", 3, "20 reps", "Abs & Obliques", "Floor",
@@ -354,7 +413,16 @@ object EchoAIEngine {
                     listOf("Pulling on neck with hands", "Rushing through reps"), "Lying Leg Raises", "V-Ups"),
                 Exercise("h12", "Plank Hold", 3, "60 seconds", "Core Stability", "Floor",
                     listOf("Rest on elbows, form straight line", "Squeeze glutes and core", "Keep neck straight"),
-                    listOf("Letting hips drop", "Holding breath"), "Plank on Knees", "Side Plank")
+                    listOf("Letting hips drop", "Holding breath"), "Plank on Knees", "Side Plank"),
+                Exercise("h21", "Mountain Climbers", 3, "45 seconds", "Core & Cardio", "Floor", 
+                    listOf("Get into high plank position", "Drive knees to chest rapidly in running motion", "Keep hips low and core tight"),
+                    listOf("Poking hips high in air", "Bouncing off floor too hard"), "Plank Twists", "Bear Crawl"),
+                Exercise("h22", "Bodyweight Russian Twists", 3, "20 reps", "Obliques", "Floor", 
+                    listOf("Sit with knees bent, feet elevated slightly", "Twist chest from side to side touching floor", "Keep stomach pulled in"),
+                    listOf("Rounding shoulders forward", "Moving only arms"), "Bicycle Crunches", "Plank Shoulder Taps"),
+                Exercise("h23", "High Knees Sprint", 3, "30 seconds", "Cardio", "Bodyweight", 
+                    listOf("Run in place bringing knees to hip height", "Pump arms rapidly with chest tall", "Land softly on toes"),
+                    listOf("Leaning backwards", "Not bringing knees high enough"), "Jumping Jacks", "Burpees")
             )
         }
 

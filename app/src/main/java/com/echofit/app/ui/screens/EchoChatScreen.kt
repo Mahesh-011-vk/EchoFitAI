@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.echofit.app.domain.model.ChatMessage
 import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.threeDTiltEffect
+import com.echofit.app.ui.components.ThreeDText
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -64,26 +66,15 @@ fun EchoChatScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Chat Header
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(GoldAccent, DarkGold))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("E", color = PrimaryBlack, fontWeight = FontWeight.Black, fontSize = 20.sp)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text("Echo AI Coach", style = Typography.bodyLarge, fontWeight = FontWeight.Bold)
-                Text("Online | Ready to motivate", style = Typography.labelMedium, color = SuccessGreen)
-            }
-            Spacer(modifier = Modifier.weight(1f))
+            ThreeDText(
+                text = "COACH ECHO",
+                fontSize = 28.sp
+            )
             Text(
                 text = "CLEAR CHAT",
                 color = ErrorRed,
@@ -260,10 +251,10 @@ fun EchoChatScreen(
                 },
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(GoldAccent)
+                    .background(Brush.verticalGradient(listOf(OrangeGradStart, OrangeGradEnd)))
                     .size(48.dp)
             ) {
-                Icon(imageVector = Icons.Default.Send, contentDescription = "Send", tint = PrimaryBlack)
+                Icon(imageVector = Icons.Default.Send, contentDescription = "Send", tint = Color.White)
             }
         }
 
@@ -288,43 +279,42 @@ fun ChatBubble(message: ChatMessage) {
             modifier = Modifier
                 .widthIn(max = 280.dp)
                 .threeDTiltEffect()
-                .padding(bottom = 4.dp, end = 4.dp)
+                .padding(bottom = 6.dp, end = 6.dp)
         ) {
-            // 3D Shadow/Bevel base offset
+            // Soft drop shadow
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(x = 4.dp, y = 4.dp)
-                    .clip(bubbleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                if (message.isUser) PrimaryBlack else DarkGold.copy(alpha = 0.5f),
-                                PrimaryBlack
-                            )
-                        )
-                    )
+                    .offset(y = 3.dp)
+                    .blur(4.dp)
+                    .background(Color(0x0F000000), bubbleShape)
             )
 
             // Main Chat Bubble Layer
+            val bubbleBrush = if (message.isUser) null else Brush.verticalGradient(listOf(EmeraldGradStart, EmeraldGradEnd))
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
                         width = 1.dp,
-                        color = if (message.isUser) BorderGray else GoldAccent.copy(alpha = 0.3f),
+                        color = if (message.isUser) BorderGray else Color.White.copy(alpha = 0.15f),
                         shape = bubbleShape
                     ),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (message.isUser) SurfaceDark else Color(0xFF1E1C14)
+                    containerColor = if (message.isUser) SurfaceDark else Color.Transparent
                 ),
                 shape = bubbleShape
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                val columnModifier = if (bubbleBrush != null) {
+                    Modifier.background(bubbleBrush).padding(12.dp)
+                } else {
+                    Modifier.padding(12.dp)
+                }
+                Column(modifier = columnModifier) {
                     Text(
                         text = message.text,
                         style = Typography.bodyLarge,
-                        color = TextWhite
+                        color = if (message.isUser) TextWhite else Color.White
                     )
                 }
             }

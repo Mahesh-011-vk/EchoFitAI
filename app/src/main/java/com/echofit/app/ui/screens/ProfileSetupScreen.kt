@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -18,6 +19,7 @@ import com.echofit.app.domain.model.GoalAnalysis
 import com.echofit.app.domain.model.UserProfile
 import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.PremiumButton
+import com.echofit.app.ui.components.ThreeDText
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
 
@@ -59,11 +61,8 @@ fun ProfileSetupScreen(
     ) {
         Spacer(modifier = Modifier.height(24.dp))
         
-        Text(
+        ThreeDText(
             text = "ECHOFIT",
-            style = Typography.titleLarge,
-            color = GoldAccent,
-            fontWeight = FontWeight.Black,
             fontSize = 32.sp
         )
         Text(
@@ -209,7 +208,8 @@ fun ProfileSetupScreen(
                         viewModel.saveProfile(profile)
                         step = 2
                     },
-                    enabled = name.isNotBlank()
+                    enabled = name.isNotBlank(),
+                    buttonBrush = if (name.isNotBlank()) Brush.linearGradient(listOf(OrangeGradStart, OrangeGradEnd)) else null
                 )
             }
         } else if (step == 2) {
@@ -254,7 +254,8 @@ fun ProfileSetupScreen(
                         text = "ENTER WORKOUT DASHBOARD",
                         onClick = {
                             onSetupComplete()
-                        }
+                        },
+                        buttonBrush = Brush.linearGradient(listOf(OrangeGradStart, OrangeGradEnd))
                     )
                 }
             }

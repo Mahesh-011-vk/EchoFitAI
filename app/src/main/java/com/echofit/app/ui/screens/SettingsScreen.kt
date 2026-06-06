@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.PremiumButton
+import com.echofit.app.ui.components.ThreeDText
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -55,13 +57,12 @@ fun SettingsScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "App Configuration",
-            style = Typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            modifier = Modifier.fillMaxWidth()
+        ThreeDText(
+            text = "SETTINGS",
+            fontSize = 28.sp,
+            modifier = Modifier.align(Alignment.Start)
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Manage your reminders, keys, and data logs",
             style = Typography.bodyMedium,
@@ -138,7 +139,12 @@ fun SettingsScreen(
                     Switch(
                         checked = rem.isEnabled,
                         onCheckedChange = { viewModel.updateReminderSetting(rem.id, it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = GoldAccent, checkedTrackColor = DarkGold)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = SuccessGreen,
+                            uncheckedThumbColor = TextGray,
+                            uncheckedTrackColor = BorderGray
+                        )
                     )
                 }
             }
@@ -147,7 +153,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Cloud Database Sync Control
-        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth(), isGlowing = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(imageVector = Icons.Default.CloudSync, contentDescription = "Sync", tint = GoldAccent)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -166,7 +172,9 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
+            val syncBrush = Brush.linearGradient(listOf(OrangeGradStart, OrangeGradEnd))
+            PremiumButton(
+                text = if (isSyncingCloud) "UPLOADING TO FIRESTORE..." else "FORCE FIREBASE SYNC",
                 onClick = {
                     isSyncingCloud = true
                     scope.launch {
@@ -176,13 +184,9 @@ fun SettingsScreen(
                         Toast.makeText(context, "Cloud sync complete!", Toast.LENGTH_SHORT).show()
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = GoldAccent),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSyncingCloud
-            ) {
-                Text(if (isSyncingCloud) "UPLOADING TO FIRESTORE..." else "FORCE FIREBASE SYNC", color = PrimaryBlack, fontWeight = FontWeight.Bold)
-            }
+                enabled = !isSyncingCloud,
+                buttonBrush = if (!isSyncingCloud) syncBrush else null
+            )
         }
 
         Spacer(modifier = Modifier.height(20.dp))

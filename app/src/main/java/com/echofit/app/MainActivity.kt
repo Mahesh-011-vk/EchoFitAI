@@ -12,6 +12,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import com.echofit.app.ui.components.EchoBottomNavigation
 import com.echofit.app.ui.components.BackgroundVideoPlayer
 import com.echofit.app.ui.screens.*
@@ -30,18 +33,15 @@ class MainActivity : ComponentActivity() {
                 val userProfile by viewModel.userProfile.collectAsState()
                 val selectedTab by viewModel.selectedTab.collectAsState()
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    // Loop the particle flower background video
-                    BackgroundVideoPlayer(
-                        videoResId = R.raw.background_video,
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.white_silk_bg),
+                        contentDescription = "White Silk Background",
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
-                    )
-
-                    // Translucent slate overlay to keep text perfectly legible
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(PrimaryBlack.copy(alpha = 0.88f))
                     )
 
                     if (userProfile == null) {
@@ -72,12 +72,12 @@ class MainActivity : ComponentActivity() {
                                     .padding(innerPadding)
                             ) {
                                 when (selectedTab) {
-                                    "Dashboard" -> DashboardScreen(viewModel = viewModel)
-                                    "Diet" -> DietPlanScreen(viewModel = viewModel)
-                                    "Workout" -> WorkoutPlanScreen(viewModel = viewModel)
-                                    "Progress" -> ProgressPhotoScreen(viewModel = viewModel)
-                                    "Echo" -> EchoChatScreen(viewModel = viewModel)
-                                    "Profile" -> SettingsScreen(viewModel = viewModel)
+                                    "HOME" -> DashboardScreen(viewModel = viewModel)
+                                    "DIET" -> DietPlanScreen(viewModel = viewModel)
+                                    "WORKOUT" -> WorkoutPlanScreen(viewModel = viewModel)
+                                    "PROGRESS" -> ProgressPhotoScreen(viewModel = viewModel)
+                                    "ECHOAI" -> EchoChatScreen(viewModel = viewModel)
+                                    "SETTING" -> SettingsScreen(viewModel = viewModel)
                                     else -> DashboardScreen(viewModel = viewModel)
                                 }
                             }

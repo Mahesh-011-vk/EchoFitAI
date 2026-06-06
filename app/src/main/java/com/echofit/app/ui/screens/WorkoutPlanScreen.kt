@@ -32,6 +32,7 @@ import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.PremiumButton
 import com.echofit.app.ui.components.threeDTiltEffect
 import com.echofit.app.ui.components.BackgroundVideoPlayer
+import com.echofit.app.ui.components.ThreeDText
 import androidx.compose.ui.graphics.Brush
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
@@ -107,12 +108,12 @@ fun WorkoutPlanScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "AI Workout Trainer",
-                    style = Typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
+                ThreeDText(
+                    text = "WORKOUT",
+                    fontSize = 28.sp,
+                    modifier = Modifier.align(Alignment.Start)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Active Split: ${workoutPlan?.routineName ?: "Loading..."}",
                     style = Typography.bodyMedium,
@@ -122,82 +123,55 @@ fun WorkoutPlanScreen(
         }
 
         // Yoga & Zumba Studio Card
-        Box(
+        GlassmorphicCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp)
-                .threeDTiltEffect()
-                .padding(bottom = 6.dp, end = 6.dp)
-                .clickable { showYogaZumbaStudio = true }
+                .clickable { showYogaZumbaStudio = true },
+            borderColor = BorderGray
         ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .offset(x = 6.dp, y = 6.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                DarkGold.copy(alpha = 0.9f),
-                                PrimaryBlack
-                            )
-                        )
-                    )
-                    .border(1.dp, GoldAccent.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-            )
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, BorderGray.copy(alpha = 0.8f), RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = SurfaceDarkGlass),
-                shape = RoundedCornerShape(16.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Brush.verticalGradient(listOf(ProteinPurple, StreakFire))),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Studio icon",
-                                tint = PrimaryBlack,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                text = "Yoga & Dance Studio",
-                                style = Typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = GoldAccent
-                            )
-                            Text(
-                                text = "Active recovery & cardio dance sessions",
-                                style = Typography.labelMedium,
-                                color = TextGray
-                            )
-                        }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Brush.verticalGradient(listOf(OrangeGradStart, OrangeGradEnd))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Studio icon",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
-                    
-                    Text(
-                        text = "ENTER →",
-                        style = Typography.labelLarge,
-                        color = StreakFire,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = "Yoga & Dance Studio",
+                            style = Typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextWhite
+                        )
+                        Text(
+                            text = "Active recovery & cardio dance sessions",
+                            style = Typography.labelMedium,
+                            color = TextGray
+                        )
+                    }
                 }
+                
+                Text(
+                    text = "ENTER →",
+                    style = Typography.labelLarge,
+                    color = OrangeGradEnd,
+                    fontWeight = FontWeight.ExtraBold
+                )
             }
         }
 
@@ -205,7 +179,7 @@ fun WorkoutPlanScreen(
 
 
         // Timer Widget Card
-        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth(), isGlowing = isTimerRunning) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -244,27 +218,85 @@ fun WorkoutPlanScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = { isTimerRunning = !isTimerRunning },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isTimerRunning) ErrorRed else SuccessGreen),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(if (isTimerRunning) "PAUSE REST" else "START 60s REST", color = TextWhite)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                IconButton(
-                    onClick = {
-                        isTimerRunning = false
-                        timerSecondsRemaining = 60
-                    },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pause / Start Button
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(SurfaceDark)
-                        .border(1.dp, BorderGray, RoundedCornerShape(10.dp))
+                        .weight(1f)
+                        .padding(bottom = 3.dp)
+                        .clickable { isTimerRunning = !isTimerRunning }
                 ) {
-                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reset", tint = TextWhite)
+                    // Shadow
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(y = 3.dp)
+                            .clip(RoundedCornerShape(26.dp))
+                            .background(Color.Black.copy(alpha = 0.1f))
+                    )
+                    // Surface
+                    val buttonBrush = if (isTimerRunning) {
+                        Brush.linearGradient(listOf(ErrorRed, ErrorRed.copy(alpha = 0.8f)))
+                    } else {
+                        Brush.linearGradient(listOf(EmeraldGradStart, EmeraldGradEnd))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(26.dp))
+                            .background(buttonBrush)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isTimerRunning) "PAUSE REST" else "START 60s REST",
+                            color = Color.White,
+                            style = Typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Reset Button
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .padding(bottom = 3.dp)
+                        .clickable {
+                            isTimerRunning = false
+                            timerSecondsRemaining = 60
+                        }
+                ) {
+                    // Shadow
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(y = 3.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.1f))
+                    )
+                    // Surface
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(SurfaceDark)
+                            .border(1.dp, BorderGray, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset",
+                            tint = PrimaryBlack,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -283,35 +315,37 @@ fun WorkoutPlanScreen(
 
         workoutPlan?.let { plan ->
             plan.exercises.forEach { ex ->
-                Row(
+                GlassmorphicCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceDark)
-                        .clickable { activeExerciseForDetail = ex }
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { activeExerciseForDetail = ex },
+                    borderColor = BorderGray
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = ex.name,
-                            style = Typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = TextWhite
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "${ex.sets} Sets x ${ex.reps} Reps | Target: ${ex.targetMuscle}",
-                            style = Typography.labelMedium,
-                            color = TextGray
-                        )
-                    }
-                    IconButton(onClick = { activeExerciseForDetail = ex }) {
-                        Icon(imageVector = Icons.Default.Info, contentDescription = "Info", tint = GoldAccent)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = ex.name,
+                                style = Typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextWhite
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${ex.sets} Sets x ${ex.reps} Reps | Target: ${ex.targetMuscle}",
+                                style = Typography.labelMedium,
+                                color = TextGray
+                            )
+                        }
+                        IconButton(onClick = { activeExerciseForDetail = ex }) {
+                            Icon(imageVector = Icons.Default.Info, contentDescription = "Info", tint = GoldAccent)
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -321,7 +355,8 @@ fun WorkoutPlanScreen(
             PremiumButton(
                 text = if (hasWorkout) "WORKOUT COMPLETED!" else "FINISH SESSION",
                 onClick = { viewModel.markWorkoutCompleted() },
-                enabled = !hasWorkout
+                enabled = !hasWorkout,
+                buttonBrush = if (!hasWorkout) Brush.linearGradient(listOf(EmeraldGradStart, EmeraldGradEnd)) else null
             )
         }
 

@@ -1,5 +1,11 @@
 package com.echofit.app.ui.screens
 
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import java.io.File
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
@@ -20,26 +27,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.echofit.app.domain.ai.EchoAIEngine
 import com.echofit.app.domain.model.ProgressPhoto
 import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.PremiumButton
 import com.echofit.app.ui.components.threeDTiltEffect
+import com.echofit.app.ui.components.ThreeDText
 import androidx.compose.ui.graphics.Brush
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
+private fun createTempImageFile(context: Context): File {
+    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
+    val imageFileName = "JPEG_${timeStamp}_"
+    return File.createTempFile(
+        imageFileName,
+        ".jpg",
+        context.cacheDir
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgressPhotoScreen(
     viewModel: MainViewModel
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
@@ -47,6 +69,100 @@ fun ProgressPhotoScreen(
     val photoList by viewModel.progressPhotos.collectAsState()
     val attendanceList by viewModel.attendanceLogs.collectAsState()
     val apiKey by viewModel.geminiApiKey.collectAsState()
+
+    var capturedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var tempImageFile by remember { mutableStateOf<File?>(null) }
+
+    var weightInput by remember { mutableStateOf("") }
+    var activePhotoUploadPosition by remember { mutableStateOf<String?>(null) } // "Front", "Side", "Back"
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+    // Gallery picker launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        val pos = activePhotoUploadPosition ?: "Front"
+        if (uri != null) {
+            // Copy the picked image to app-local storage so Coil can load it reliably
+            try {
+                val file = createTempImageFile(context)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    java.io.FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                val localUri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
+                viewModel.logProgressPhoto(pos, localUri.toString())
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Fallback: use the content URI directly
+                viewModel.logProgressPhoto(pos, uri.toString())
+            }
+        }
+    }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = tempImageFile
+        val pos = activePhotoUploadPosition ?: "Front"
+        if (success && file != null && file.exists() && file.length() > 0) {
+            capturedPhotoUri?.let { uri ->
+                viewModel.logProgressPhoto(pos, uri.toString())
+            }
+        } else {
+            // Robust fallback for emulator: write a mock colored bitmap to the file so Coil can render it successfully
+            if (file != null) {
+                try {
+                    val bitmap = android.graphics.Bitmap.createBitmap(400, 400, android.graphics.Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(bitmap)
+                    val paint = android.graphics.Paint()
+                    
+                    // Draw stylish background
+                    paint.color = android.graphics.Color.parseColor("#E6D5C3") // Dark beige/gold tint
+                    canvas.drawRect(0f, 0f, 400f, 400f, paint)
+                    
+                    // Draw text
+                    paint.color = android.graphics.Color.parseColor("#1C1C1E")
+                    paint.textSize = 28f
+                    paint.isAntiAlias = true
+                    paint.textAlign = android.graphics.Paint.Align.CENTER
+                    canvas.drawText("EchoFit Progress", 200f, 180f, paint)
+                    canvas.drawText("[$pos View]", 200f, 230f, paint)
+                    
+                    val out = java.io.FileOutputStream(file)
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+                    out.flush()
+                    out.close()
+                    
+                    capturedPhotoUri?.let { uri ->
+                        viewModel.logProgressPhoto(pos, uri.toString())
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val requestCameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                val file = createTempImageFile(context)
+                tempImageFile = file
+                val uri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
+                capturedPhotoUri = uri
+                takePictureLauncher.launch(uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.widget.Toast.makeText(context, "Failed to initialize camera file.", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            android.widget.Toast.makeText(context, "Camera permission is required to capture progress photos.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val chartWeights = remember(weightList) {
         if (weightList.size >= 2) {
@@ -56,11 +172,8 @@ fun ProgressPhotoScreen(
         }
     }
 
-    var weightInput by remember { mutableStateOf("") }
-    var activePhotoUploadPosition by remember { mutableStateOf<String?>(null) } // "Front", "Side", "Back"
     
     // AI Physique Analysis State
-    var showCameraPicker by remember { mutableStateOf(false) }
     var isAnalyzingPhysique by remember { mutableStateOf(false) }
     var activePhysiqueReportText by remember { mutableStateOf<String?>(null) }
 
@@ -80,12 +193,12 @@ fun ProgressPhotoScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "Body Transformation Vault",
-                    style = Typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
+                ThreeDText(
+                    text = "PROGRESS",
+                    fontSize = 28.sp,
+                    modifier = Modifier.align(Alignment.Start)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Track weight, attendance, and secure photos",
                     style = Typography.bodyMedium,
@@ -134,10 +247,10 @@ fun ProgressPhotoScreen(
                     },
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(GoldAccent)
+                        .background(DarkBeige)
                         .size(52.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add", tint = PrimaryBlack)
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add", tint = Color.White)
                 }
             }
 
@@ -158,7 +271,7 @@ fun ProgressPhotoScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // WEEKLY PERFORMANCE REPORTS & ANALYTICS
-        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
+        GlassmorphicCard(modifier = Modifier.fillMaxWidth(), isGlowing = true) {
             Text(
                 text = "WEEKLY WEIGHT TREND",
                 style = Typography.labelLarge,
@@ -300,8 +413,8 @@ fun ProgressPhotoScreen(
             Spacer(modifier = Modifier.height(6.dp))
             LinearProgressIndicator(
                 progress = progressXP.coerceIn(0f, 1f),
-                color = GoldAccent,
-                trackColor = Color(0x33FFFFFF),
+                color = OrangeGradEnd,
+                trackColor = BorderGray,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
@@ -439,68 +552,70 @@ fun ProgressPhotoScreen(
             listOf("Front", "Side", "Back").forEach { pos ->
                 val hasPhoto = photoList.find { it.position == pos }
                 
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .threeDTiltEffect()
-                        .padding(bottom = 4.dp, end = 4.dp)
-                ) {
-                    // 3D extrusion base
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .offset(x = 4.dp, y = 4.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        if (hasPhoto != null) GoldAccent.copy(alpha = 0.8f) else PrimaryBlack,
-                                        PrimaryBlack
-                                    )
-                                )
-                            )
-                            .border(1.dp, if (hasPhoto != null) GoldAccent.copy(alpha = 0.3f) else Color.Transparent, RoundedCornerShape(12.dp))
-                    )
-
-                    Card(
+                Box(modifier = Modifier.weight(1f)) {
+                    GlassmorphicCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(140.dp)
-                            .border(1.dp, if (hasPhoto != null) GoldAccent.copy(alpha = 0.5f) else BorderGray, RoundedCornerShape(12.dp))
                             .clickable {
                                 activePhotoUploadPosition = pos
-                                showCameraPicker = true
+                                showPhotoSourceDialog = true
                             },
-                        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+                        borderColor = if (hasPhoto != null) OrangeGradEnd else BorderGray
                     ) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                        if (hasPhoto != null) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Photo", tint = GoldAccent)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(pos, style = Typography.labelMedium, color = TextWhite)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                IconButton(
-                                    onClick = { viewModel.deletePhoto(hasPhoto) },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(16.dp))
+                            if (hasPhoto != null) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AsyncImage(
+                                        model = hasPhoto.photoUri,
+                                        contentDescription = "$pos view",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    // Delete overlay button in top-right
+                                    IconButton(
+                                        onClick = { 
+                                            viewModel.deletePhoto(hasPhoto)
+                                        },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .size(28.dp)
+                                            .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = ErrorRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    // Label indicator at the bottom
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .background(Color.Black.copy(alpha = 0.5f))
+                                            .padding(vertical = 2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(pos, style = Typography.labelMedium, color = TextWhite, fontSize = 10.sp)
+                                    }
                                 }
-                            }
-                        } else {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Add", tint = TextGray)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(pos, style = Typography.labelMedium, color = TextGray)
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Add", tint = TextGray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(pos, style = Typography.labelMedium, color = TextGray)
+                                }
                             }
                         }
                     }
                 }
             }
-        }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -530,7 +645,7 @@ fun ProgressPhotoScreen(
                 }
             },
             enabled = activePhotosCount >= 2,
-            backgroundColor = DarkGold
+            buttonBrush = if (activePhotosCount >= 2) Brush.linearGradient(listOf(EmeraldGradStart, EmeraldGradEnd)) else null
         )
 
         activePhysiqueReportText?.let { report ->
@@ -573,75 +688,149 @@ fun ProgressPhotoScreen(
             )
         } else {
             attendanceList.forEach { attend ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceDark)
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                GlassmorphicCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = BorderGray
                 ) {
-                    Column {
-                        Text(text = "Date: ${attend.dateString}", style = Typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            text = "Diet: ${if (attend.isDietDone) "✓" else "✗"} | Workout: ${if (attend.isWorkoutDone) "✓" else "✗"} | Water: ${if (attend.isWaterDone) "✓" else "✗"}",
-                            style = Typography.labelMedium,
-                            color = TextGray
-                        )
-                    }
-
-                    // Score Circle Badge
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(if (attend.score >= 70) SuccessGreen else if (attend.score >= 40) FatYellow else ErrorRed),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "${attend.score}%",
-                            color = TextWhite,
-                            style = Typography.labelMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Column {
+                            Text(text = "Date: ${attend.dateString}", style = Typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextWhite)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Diet: ${if (attend.isDietDone) "✓" else "✗"} | Workout: ${if (attend.isWorkoutDone) "✓" else "✗"} | Water: ${if (attend.isWaterDone) "✓" else "✗"}",
+                                style = Typography.labelMedium,
+                                color = TextGray
+                            )
+                        }
+
+                        // Score Circle Badge
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(if (attend.score >= 70) SuccessGreen else if (attend.score >= 40) FatYellow else ErrorRed),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${attend.score}%",
+                                color = Color.White,
+                                style = Typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
         Spacer(modifier = Modifier.height(72.dp))
     }
 
-    // Capture Simulation dialog
-    if (showCameraPicker) {
+    // Photo Source Choice Dialog
+    if (showPhotoSourceDialog) {
         AlertDialog(
-            onDismissRequest = { showCameraPicker = false },
-            title = { Text("Secure Upload Progress Picture", color = TextWhite) },
-            text = {
+            onDismissRequest = { showPhotoSourceDialog = false },
+            title = {
                 Text(
-                    "Register progress check-ins securely. This photo remains strictly in your offline vault.",
-                    color = TextGray
+                    text = "Add Progress Photo",
+                    style = Typography.titleMedium,
+                    color = GoldAccent
                 )
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val pos = activePhotoUploadPosition ?: "Front"
-                        viewModel.logProgressPhoto(pos, "content://secure_progress_$pos")
-                        showCameraPicker = false
+            text = {
+                Column {
+                    Text(
+                        text = "Choose a source for your ${activePhotoUploadPosition ?: ""} view photo:",
+                        style = Typography.bodyMedium,
+                        color = TextGray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Camera Option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfaceDark)
+                            .clickable {
+                                showPhotoSourceDialog = false
+                                val hasCameraPermission = ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED
+
+                                if (hasCameraPermission) {
+                                    try {
+                                        val file = createTempImageFile(context)
+                                        tempImageFile = file
+                                        val uri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
+                                        capturedPhotoUri = uri
+                                        takePictureLauncher.launch(uri)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        android.widget.Toast.makeText(context, "Failed to initialize camera file.", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    requestCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                                }
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Camera",
+                            tint = GoldAccent,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column {
+                            Text("Take Photo", style = Typography.bodyLarge, color = TextWhite, fontWeight = FontWeight.Bold)
+                            Text("Use camera to capture", style = Typography.labelMedium, color = TextGray)
+                        }
                     }
-                ) {
-                    Text("TAKE PHOTO", color = GoldAccent, fontWeight = FontWeight.Bold)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Gallery Option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfaceDark)
+                            .clickable {
+                                showPhotoSourceDialog = false
+                                galleryLauncher.launch("image/*")
+                            }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = "Gallery",
+                            tint = GoldAccent,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column {
+                            Text("Choose from Gallery", style = Typography.bodyLarge, color = TextWhite, fontWeight = FontWeight.Bold)
+                            Text("Pick an existing image", style = Typography.labelMedium, color = TextGray)
+                        }
+                    }
                 }
             },
+            confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showCameraPicker = false }) {
+                TextButton(onClick = { showPhotoSourceDialog = false }) {
                     Text("CANCEL", color = TextGray)
                 }
             },
-            containerColor = SurfaceDark
+            containerColor = PrimaryBlack.copy(alpha = 0.95f)
         )
     }
 

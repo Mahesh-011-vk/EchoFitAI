@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +30,7 @@ import com.echofit.app.ui.components.GlassmorphicCard
 import com.echofit.app.ui.components.PremiumButton
 import com.echofit.app.ui.components.threeDTiltEffect
 import com.echofit.app.ui.components.BackgroundVideoPlayer
+import com.echofit.app.ui.components.ThreeDText
 import androidx.compose.ui.graphics.Brush
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
@@ -90,12 +92,10 @@ fun YogaZumbaScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Yoga & Dance Studio",
-            style = Typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            modifier = Modifier.fillMaxWidth()
+        ThreeDText(
+            text = "YOGA & DANCE",
+            fontSize = 28.sp,
+            modifier = Modifier.align(Alignment.Start)
         )
         Text(
             text = "Active recovery yoga & cardio dance zumba",
@@ -114,21 +114,13 @@ fun YogaZumbaScreen(
                 .threeDTiltEffect()
                 .padding(bottom = 6.dp, end = 6.dp)
         ) {
-            // 3D background base
+            // 3D background extrusion base
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .offset(x = 6.dp, y = 6.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                DarkGold.copy(alpha = 0.8f),
-                                PrimaryBlack
-                            )
-                        )
-                    )
-                    .border(1.dp, GoldAccent.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color.Black.copy(alpha = 0.08f))
             )
 
             // 3D image layer
@@ -138,8 +130,8 @@ fun YogaZumbaScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, BorderGray, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(32.dp))
+                    .border(1.dp, BorderGray, RoundedCornerShape(32.dp))
             )
         }
 
@@ -243,13 +235,13 @@ fun YogaZumbaScreen(
                                     onClick = { isSessionPlaying = !isSessionPlaying },
                                     modifier = Modifier
                                         .clip(CircleShape)
-                                        .background(GoldAccent)
+                                        .background(OrangeGradEnd)
                                         .size(42.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Play",
-                                        tint = PrimaryBlack
+                                        imageVector = if (isSessionPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (isSessionPlaying) "Pause" else "Play",
+                                        tint = Color.White
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -313,25 +305,28 @@ fun CardioSessionRow(
     session: CardioSession,
     onClick: () -> Unit
 ) {
-    Row(
+    GlassmorphicCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceDark)
-            .clickable { onClick() }
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onClick() },
+        borderColor = BorderGray
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = session.name, style = Typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Text(
-                text = "${session.durationMinutes} mins | Burn: ${session.caloriesBurned} kcal | Diff: ${session.difficulty}",
-                style = Typography.labelMedium,
-                color = TextGray
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = session.name, style = Typography.bodyLarge, fontWeight = FontWeight.Bold, color = TextWhite)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${session.durationMinutes} mins | Burn: ${session.caloriesBurned} kcal | Diff: ${session.difficulty}",
+                    style = Typography.labelMedium,
+                    color = TextGray
+                )
+            }
+            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Play", tint = GoldAccent)
         }
-        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Play", tint = GoldAccent)
     }
+    Spacer(modifier = Modifier.height(8.dp))
 }

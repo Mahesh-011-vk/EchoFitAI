@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -16,6 +18,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +42,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,20 +84,29 @@ fun Modifier.threeDTiltEffect(): Modifier = composed {
             cameraDistance = 16f * density
         }
         .pointerInput(Unit) {
-            detectTapGestures(
-                onPress = { offset ->
+            awaitPointerEventScope {
+                while (true) {
+                    val down = awaitFirstDown(requireUnconsumed = false)
                     if (width > 0 && height > 0) {
-                        val normalizeX = (offset.x / width) - 0.5f
-                        val normalizeY = (offset.y / height) - 0.5f
-                        // Map touch relative coordinate to 3D rotation angles (-15 to 15 degrees)
+                        val normalizeX = (down.position.x / width) - 0.5f
+                        val normalizeY = (down.position.y / height) - 0.5f
                         rotateX = -normalizeY * 15f
                         rotateY = normalizeX * 15f
                     }
-                    tryAwaitRelease()
+                    
+                    var upReceived = false
+                    while (!upReceived) {
+                        val event = awaitPointerEvent()
+                        val anyUp = event.changes.any { it.changedToUp() }
+                        if (anyUp) {
+                            upReceived = true
+                        }
+                    }
+                    
                     rotateX = 0f
                     rotateY = 0f
                 }
-            )
+            }
         }
 }
 
@@ -100,42 +118,67 @@ fun Modifier.threeDTiltEffect(): Modifier = composed {
 @Composable
 fun GlassmorphicCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = SurfaceDarkGlass,
-    borderColor: Color = BorderGray,
+    backgroundColor: Color = Color.White,
+    backgroundBrush: Brush? = null,
+    isGlowing: Boolean = false,
+    borderColor: Color = Color.White.copy(alpha = 0.5f),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Box(
         modifier = modifier
             .threeDTiltEffect()
-            .padding(bottom = 6.dp, end = 6.dp)
+            .padding(8.dp)
     ) {
-        // Layer 1: 3D Gold Extruded Bevel Base
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .offset(x = 6.dp, y = 6.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            DarkGold.copy(alpha = 0.9f),
-                            PrimaryBlack
-                        )
-                    )
-                )
-                .border(1.dp, GoldAccent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-        )
+        if (isGlowing) {
+            // Glowing neon shadow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 4.dp)
+                    .blur(16.dp)
+                    .background(SuccessGreen.copy(alpha = 0.25f), RoundedCornerShape(32.dp))
+            )
+        } else {
+            // High quality multi-layered soft neumorphic shadow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 0.dp, y = 6.dp)
+                    .blur(12.dp)
+                    .background(Color(0x0A000000), RoundedCornerShape(32.dp))
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(x = 0.dp, y = 2.dp)
+                    .blur(4.dp)
+                    .background(Color(0x05000000), RoundedCornerShape(32.dp))
+            )
+        }
 
-        // Layer 2: Glossy glass card surface container
+        // Top surface card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, borderColor.copy(alpha = 0.8f), RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = backgroundColor),
-            shape = RoundedCornerShape(20.dp)
+                .border(
+                    width = 1.dp,
+                    color = if (isGlowing) Color.White.copy(alpha = 0.8f) else borderColor,
+                    shape = RoundedCornerShape(32.dp)
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (backgroundBrush != null) Color.Transparent else backgroundColor
+            ),
+            shape = RoundedCornerShape(32.dp)
         ) {
+            val columnModifier = if (backgroundBrush != null) {
+                Modifier
+                    .background(backgroundBrush)
+                    .padding(20.dp)
+            } else {
+                Modifier.padding(20.dp)
+            }
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = columnModifier
             ) {
                 content()
             }
@@ -165,80 +208,56 @@ fun CalorieProgressRing(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.size(size - 20.dp)) {
-            // --- CALORIE OUTER RING (Volumetric Tube 3D Shading) ---
-            // 3D Dark drop shadow backing
+            // --- CALORIE OUTER RING ---
+            // Outer Ring Track shadow backing
             drawArc(
-                color = Color(0x33000000),
+                color = Color.Black.copy(alpha = 0.03f),
                 startAngle = -90f,
                 sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = 24f, cap = StrokeCap.Round)
-            )
-            // Outer Ring Track (Ambient glow)
-            drawArc(
-                color = Color(0x1AFFFF00),
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = 18f, cap = StrokeCap.Round)
-            )
-            // Volumetric Base extrusion shadow
-            drawArc(
-                color = DarkGold.copy(alpha = 0.4f),
-                startAngle = -90f,
-                sweepAngle = (calorieProgress.coerceIn(0f, 1f) * 360f),
                 useCenter = false,
                 style = Stroke(width = 20f, cap = StrokeCap.Round)
             )
+            // Outer Ring Track (light grey background)
+            drawArc(
+                color = Color(0xFFE5E7EB),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = 16f, cap = StrokeCap.Round)
+            )
             // Active Gold cylinder
             drawArc(
-                color = GoldAccent,
+                color = OrangeGradEnd,
                 startAngle = -90f,
                 sweepAngle = (calorieProgress.coerceIn(0f, 1f) * 360f),
                 useCenter = false,
                 style = Stroke(width = 16f, cap = StrokeCap.Round)
             )
-            // Inner glare/highlight for 3D metallic refraction
-            drawArc(
-                color = Color.White.copy(alpha = 0.4f),
-                startAngle = -90f,
-                sweepAngle = (calorieProgress.coerceIn(0f, 1f) * 360f),
-                useCenter = false,
-                style = Stroke(width = 4f, cap = StrokeCap.Round)
-            )
 
             // --- PROTEIN INNER RING ---
             // Track shadow
             drawArc(
-                color = Color(0x1A8E24AA),
+                color = Color.Black.copy(alpha = 0.02f),
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
                 style = Stroke(width = 12f, cap = StrokeCap.Round)
             )
-            // Base shadow
+            // Track background (light grey)
             drawArc(
-                color = Color(0x4D000000),
+                color = Color(0xFFF3F4F6),
                 startAngle = -90f,
-                sweepAngle = (proteinProgress.coerceIn(0f, 1f) * 360f),
+                sweepAngle = 360f,
                 useCenter = false,
-                style = Stroke(width = 14f, cap = StrokeCap.Round)
+                style = Stroke(width = 10f, cap = StrokeCap.Round)
             )
-            // Active Purple cylinder
+            // Active Green cylinder
             drawArc(
-                color = ProteinPurple,
+                color = SuccessGreen,
                 startAngle = -90f,
                 sweepAngle = (proteinProgress.coerceIn(0f, 1f) * 360f),
                 useCenter = false,
                 style = Stroke(width = 10f, cap = StrokeCap.Round)
-            )
-            // Inner highlight
-            drawArc(
-                color = Color.White.copy(alpha = 0.3f),
-                startAngle = -90f,
-                sweepAngle = (proteinProgress.coerceIn(0f, 1f) * 360f),
-                useCenter = false,
-                style = Stroke(width = 2f, cap = StrokeCap.Round)
             )
         }
 
@@ -249,7 +268,8 @@ fun CalorieProgressRing(
                 text = "${(caloriesTarget - caloriesConsumed).coerceAtLeast(0)} kcal",
                 style = Typography.titleLarge,
                 fontWeight = FontWeight.Black,
-                fontSize = 24.sp
+                fontSize = 24.sp,
+                color = PrimaryBlack
             )
             Text(
                 text = "Remaining",
@@ -262,13 +282,13 @@ fun CalorieProgressRing(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(ProteinPurple)
+                        .background(SuccessGreen)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "${proteinConsumed}/${proteinTarget}g Pro",
                     style = Typography.labelMedium,
-                    color = TextWhite,
+                    color = PrimaryBlack,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -291,40 +311,37 @@ fun StreakFireIndicator(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .offset(x = 3.dp, y = 3.dp)
+                .offset(x = 2.dp, y = 2.dp)
                 .clip(RoundedCornerShape(50.dp))
-                .background(Color(0xFF8B0000))
+                .background(Color.Black.copy(alpha = 0.15f))
         )
 
         // Pill top layer
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(50.dp))
-                .background(Color(0xFFFF4500))
-                .border(1.dp, StreakFire.copy(alpha = 0.7f), RoundedCornerShape(50.dp))
+                .background(DarkBeige)
+                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(50.dp))
                 .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = "Streak Fire",
-                tint = TextWhite,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "$streakCount DAY STREAK",
                 style = Typography.labelMedium,
-                color = TextWhite,
+                color = Color.White,
                 fontWeight = FontWeight.ExtraBold
             )
         }
     }
 }
 
-/**
- * Reusable motivational widget featuring Echo AI coach speech bubbles with 3D backing.
- */
 @Composable
 fun EchoMotivationalCard(
     message: String,
@@ -335,23 +352,23 @@ fun EchoMotivationalCard(
             .threeDTiltEffect()
             .padding(bottom = 4.dp, end = 4.dp)
     ) {
-        // Beveled shadow base
+        // Neumorphic shadow backing
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .offset(x = 4.dp, y = 4.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.verticalGradient(listOf(DarkGold.copy(alpha = 0.6f), PrimaryBlack)))
+                .offset(x = 0.dp, y = 6.dp)
+                .blur(10.dp)
+                .background(Color.Black.copy(alpha = 0.08f), RoundedCornerShape(32.dp))
         )
 
-        // Top Bubble container
+        // Top Bubble container (Emerald Gradient)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceDark)
-                .border(1.dp, GoldAccent.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                .padding(16.dp),
+                .clip(RoundedCornerShape(32.dp))
+                .background(Brush.verticalGradient(listOf(EmeraldGradStart, EmeraldGradEnd)))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Echo Avatar placeholder
@@ -359,13 +376,13 @@ fun EchoMotivationalCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(GoldAccent, DarkGold)))
+                    .background(Color.White)
                     .border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "E",
-                    color = PrimaryBlack,
+                    color = EmeraldGradEnd,
                     fontWeight = FontWeight.Black,
                     fontSize = 24.sp
                 )
@@ -380,13 +397,13 @@ fun EchoMotivationalCard(
                     text = "Echo AI Coach",
                     style = Typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = GoldAccent
+                    color = Color.White
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "\"$message\"",
                     style = Typography.bodyMedium,
-                    color = TextWhite,
+                    color = Color.White.copy(alpha = 0.85f),
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                 )
             }
@@ -394,30 +411,27 @@ fun EchoMotivationalCard(
     }
 }
 
-/**
- * Spring-based Pushable Tactile 3D Button.
- * Animates compression travel (translationY) down into its gold-bevel base upon click interaction.
- */
 @Composable
 fun PremiumButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    backgroundColor: Color = GoldAccent,
-    contentColor: Color = PrimaryBlack
+    backgroundColor: Color = DarkBeige,
+    buttonBrush: Brush? = null,
+    contentColor: Color = Color.White
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val translationY by animateDpAsState(
-        targetValue = if (isPressed) 6.dp else 0.dp,
+        targetValue = if (isPressed) 3.dp else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessHigh)
     )
 
     Box(
         modifier = modifier
-            .padding(bottom = 6.dp)
+            .padding(bottom = 3.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -425,24 +439,39 @@ fun PremiumButton(
                 onClick = onClick
             )
     ) {
-        // Physical Beveled Base
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .offset(y = 6.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (enabled) DarkGold else SurfaceDark)
-        )
+        if (enabled) {
+            // Soft shadow behind the button
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .offset(y = 3.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Color.Black.copy(alpha = 0.1f))
+            )
+        }
 
-        // Floating tactile button top surface
+        // Tactile button top surface
+        val surfaceModifier = Modifier
+            .offset(y = translationY)
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .then(
+                if (enabled) {
+                    if (buttonBrush != null) Modifier.background(buttonBrush)
+                    else Modifier.background(backgroundColor)
+                } else {
+                    Modifier.background(Color(0xFFE5E7EB))
+                }
+            )
+            .border(
+                width = 1.dp,
+                color = if (enabled) Color.White.copy(alpha = 0.15f) else Color.Transparent,
+                shape = RoundedCornerShape(26.dp)
+            )
+
         Box(
-            modifier = Modifier
-                .offset(y = translationY)
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (enabled) backgroundColor else SurfaceDark)
-                .border(1.dp, if (enabled) GoldAccent.copy(alpha = 0.5f) else BorderGray, RoundedCornerShape(14.dp)),
+            modifier = surfaceModifier,
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -450,7 +479,7 @@ fun PremiumButton(
                 style = Typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = if (enabled) contentColor else TextGray
-              )
+            )
         }
     }
 }
@@ -463,14 +492,14 @@ fun EchoBottomNavigation(
     selectedTab: String,
     onTabSelected: (String) -> Unit
 ) {
-    val items = listOf("Dashboard", "Diet", "Workout", "Progress", "Echo", "Profile")
+    val items = listOf("HOME", "DIET", "WORKOUT", "PROGRESS", "ECHOAI", "SETTING")
     val icons = mapOf(
-        "Dashboard" to Icons.Default.LocalFireDepartment,
-        "Diet" to Icons.Default.LocalFireDepartment,
-        "Workout" to Icons.Default.LocalFireDepartment,
-        "Progress" to Icons.Default.LocalFireDepartment,
-        "Echo" to Icons.Default.LocalFireDepartment,
-        "Profile" to Icons.Outlined.Person
+        "HOME" to Icons.Default.Home,
+        "DIET" to Icons.Default.Restaurant,
+        "WORKOUT" to Icons.Default.FitnessCenter,
+        "PROGRESS" to Icons.Default.TrendingUp,
+        "ECHOAI" to Icons.Default.Forum,
+        "SETTING" to Icons.Default.Settings
     )
 
     Box(
@@ -478,48 +507,70 @@ fun EchoBottomNavigation(
             .fillMaxWidth()
             .padding(12.dp)
     ) {
-        // 3D Shadow console backing
+        // Soft drop shadow backing for bottom nav
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .offset(y = 4.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(PrimaryBlack.copy(alpha = 0.8f))
-                .border(1.dp, GoldAccent.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
+                .offset(x = 2.dp, y = 4.dp)
+                .background(Color.Black.copy(alpha = 0.04f), RoundedCornerShape(24.dp))
         )
 
-        // Main Navigation Console
+        // Main Navigation Console (frosted dark beige glass)
         NavigationBar(
-            containerColor = SurfaceDarkGlass,
-            tonalElevation = 8.dp,
+            containerColor = DarkBeige,
+            tonalElevation = 0.dp,
             modifier = Modifier
-                .height(72.dp)
+                .height(80.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .border(1.dp, BorderGray.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(24.dp)
+                )
         ) {
             items.forEach { tab ->
+                val isSelected = selectedTab == tab
                 NavigationBarItem(
-                    selected = selectedTab == tab,
+                    selected = isSelected,
                     onClick = { onTabSelected(tab) },
+                    alwaysShowLabel = true,
                     icon = {
-                        Icon(
-                            imageVector = icons[tab] ?: Icons.Outlined.Person,
-                            contentDescription = tab
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Color.White.copy(alpha = 0.25f) else Color.Transparent)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = icons[tab] ?: Icons.Default.Settings,
+                                contentDescription = tab,
+                                tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     },
                     label = {
                         Text(
                             text = tab,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            softWrap = false,
+                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f)
                         )
                     },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = PrimaryBlack,
-                        selectedTextColor = GoldAccent,
-                        indicatorColor = GoldAccent,
-                        unselectedIconColor = TextGray,
-                        unselectedTextColor = TextGray
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color.White,
+                        indicatorColor = Color.Transparent,
+                        unselectedIconColor = Color.White.copy(alpha = 0.8f),
+                        unselectedTextColor = Color.White.copy(alpha = 0.8f)
                     )
                 )
             }
@@ -555,4 +606,75 @@ fun BackgroundVideoPlayer(
         modifier = modifier
     )
 }
+
+/**
+ * Loopable Video Player for network URL video assets, using center-crop (object-cover) scaling.
+ */
+@Composable
+fun BackgroundVideoPlayerUrl(
+    videoUrl: String,
+    modifier: Modifier = Modifier,
+    isMuted: Boolean = true
+) {
+    var videoWidth by remember { mutableStateOf(0) }
+    var videoHeight by remember { mutableStateOf(0) }
+
+    AndroidView(
+        factory = { ctx ->
+            val view = object : VideoView(ctx) {
+                override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                    val viewWidth = getDefaultSize(0, widthMeasureSpec)
+                    val viewHeight = getDefaultSize(0, heightMeasureSpec)
+                    if (videoWidth > 0 && videoHeight > 0) {
+                        val widthRatio = viewWidth.toFloat() / videoWidth
+                        val heightRatio = viewHeight.toFloat() / videoHeight
+                        val scale = Math.max(widthRatio, heightRatio)
+                        val measuredW = (videoWidth * scale).toInt()
+                        val measuredH = (videoHeight * scale).toInt()
+                        setMeasuredDimension(measuredW, measuredH)
+                    } else {
+                        setMeasuredDimension(viewWidth, viewHeight)
+                    }
+                }
+            }
+            view.apply {
+                setVideoURI(Uri.parse(videoUrl))
+                setOnPreparedListener { mp ->
+                    videoWidth = mp.videoWidth
+                    videoHeight = mp.videoHeight
+                    mp.isLooping = true
+                    if (isMuted) {
+                        mp.setVolume(0f, 0f)
+                    }
+                    requestLayout()
+                    start()
+                }
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * Custom Volumetric 3D Text Header.
+ * Renders a bold text with cascading offset shadows and a metallic white-grey gradient front layer.
+ */
+@Composable
+fun ThreeDText(
+    text: String,
+    modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 28.sp,
+    letterSpacing: androidx.compose.ui.unit.TextUnit = 3.sp
+) {
+    Text(
+        text = text,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        letterSpacing = letterSpacing,
+        fontWeight = FontWeight.Black,
+        fontSize = fontSize,
+        color = PrimaryBlack,
+        modifier = modifier.padding(8.dp)
+    )
+}
+
 
