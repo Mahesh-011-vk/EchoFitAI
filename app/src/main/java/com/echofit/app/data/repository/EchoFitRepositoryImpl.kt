@@ -6,6 +6,7 @@ import com.echofit.app.data.local.entity.*
 import com.echofit.app.data.remote.FirebaseSyncManager
 import com.echofit.app.data.remote.GeminiApiClient
 import com.echofit.app.domain.ai.EchoAIEngine
+import com.echofit.app.domain.ai.OfflineAIEngine
 import com.echofit.app.domain.model.*
 import com.echofit.app.domain.repository.EchoFitRepository
 import kotlinx.coroutines.flow.Flow
@@ -329,12 +330,105 @@ class EchoFitRepositoryImpl(
     }
 
     // --- AI Client Calls ---
+    private suspend fun getOfflineResponse(message: String): String {
+        val profileEntity = userProfileDao.getUserProfile()
+        val userProfile = profileEntity?.let {
+            UserProfile(
+                name = it.name,
+                age = it.age,
+                gender = it.gender,
+                height = it.height,
+                weight = it.weight,
+                targetWeight = it.targetWeight,
+                fitnessGoal = it.fitnessGoal,
+                budgetLevel = it.budgetLevel,
+                dietType = it.dietType,
+                gymAccess = it.gymAccess,
+                experienceLevel = it.experienceLevel,
+                preferredRestDay = it.preferredRestDay,
+                workoutTime = it.workoutTime,
+                mealTimings = MealTimings(
+                    breakfast = it.breakfastTime,
+                    lunch = it.lunchTime,
+                    snack = it.snackTime,
+                    dinner = it.dinnerTime
+                ),
+                injuriesOrLimitations = it.injuriesOrLimitations
+            )
+        } ?: UserProfile()
+
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val attendance = dailyLogDao.getAttendanceForDate(todayStr) ?: AttendanceEntity(
+            dateString = todayStr,
+            isDietDone = false,
+            isWorkoutDone = false,
+            isWaterDone = false,
+            isProteinDone = false,
+            isSleepTracked = false,
+            isMealPhotosUploaded = false,
+            isWeightLogged = false,
+            score = 0,
+            notes = ""
+        )
+        
+        val todayMeals = dailyLogDao.getAllMealsFlow().first().filter {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it.timestamp)) == todayStr
+        }
+        
+        val todayWater = dailyLogDao.getAllWaterFlow().first().filter {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it.timestamp)) == todayStr
+        }
+
+        return OfflineAIEngine.generateResponse(
+            newMessage = message,
+            profile = userProfile,
+            attendance = DailyAttendance(
+                dateString = attendance.dateString,
+                isDietDone = attendance.isDietDone,
+                isWorkoutDone = attendance.isWorkoutDone,
+                isWaterDone = attendance.isWaterDone,
+                isProteinDone = attendance.isProteinDone,
+                isSleepTracked = attendance.isSleepTracked,
+                isMealPhotosUploaded = attendance.isMealPhotosUploaded,
+                isWeightLogged = attendance.isWeightLogged,
+                score = attendance.score,
+                notes = attendance.notes
+            ),
+            todayMeals = todayMeals.map {
+                MealLog(
+                    id = it.id,
+                    foodName = it.foodName,
+                    portionSize = it.portionSize,
+                    calories = it.calories,
+                    protein = it.protein,
+                    carbs = it.carbs,
+                    fats = it.fats,
+                    fiber = it.fiber,
+                    timestamp = it.timestamp
+                )
+            },
+            todayWaterLitres = todayWater.sumOf { it.liters }
+        )
+    }
+
     override suspend fun getAIResponse(
         messageHistory: List<ChatMessage>,
         message: String,
         apiKey: String?
     ): String {
-        return GeminiApiClient.chatWithEcho(messageHistory, message, apiKey)
+        if (apiKey.isNullOrBlank() || (!apiKey.startsWith("AIza") && !apiKey.startsWith("AQ."))) {
+            return getOfflineResponse(message)
+        }
+        return try {
+            val response = GeminiApiClient.chatWithEcho(messageHistory, message, apiKey)
+            if (response.startsWith("Echo hit a bump:") || response.contains("quota", ignoreCase = true) || response.contains("QuotaExceededException")) {
+                getOfflineResponse(message)
+            } else {
+                response
+            }
+        } catch (e: Exception) {
+            getOfflineResponse(message)
+        }
     }
 
     override suspend fun analyzeMealPhoto(imageBytes: ByteArray, apiKey: String?): MealLog {

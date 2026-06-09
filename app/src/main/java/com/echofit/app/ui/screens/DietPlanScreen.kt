@@ -102,34 +102,23 @@ fun DietPlanScreen(
                 tempImageFile = file
                 val localUri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
                 capturedPhotoUri = localUri
+                
+                val bytes = file.readBytes()
+                isAnalyzing = true
+                viewModel.analyzeMealPhoto(bytes) { result ->
+                    isAnalyzing = false
+                    foodNameInput = result.foodName
+                    portionInput = result.portionSize
+                    caloriesInput = result.calories.toString()
+                    proteinInput = result.protein.toString()
+                    carbsInput = result.carbs.toString()
+                    fatsInput = result.fats.toString()
+                    fiberInput = result.fiber.toString()
+                    showCorrectionDialog = true
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-            }
-
-            isAnalyzing = true
-            scope.launch {
-                kotlinx.coroutines.delay(2000)
                 isAnalyzing = false
-                
-                val mockLog = viewModel.meals.value.firstOrNull() ?: MealLog(
-                    foodName = "Chana Masala with 2 Roti",
-                    portionSize = "1 Plate",
-                    calories = 410,
-                    protein = 18,
-                    carbs = 58,
-                    fats = 8,
-                    fiber = 11
-                )
-                
-                foodNameInput = mockLog.foodName
-                portionInput = mockLog.portionSize
-                caloriesInput = mockLog.calories.toString()
-                proteinInput = mockLog.protein.toString()
-                carbsInput = mockLog.carbs.toString()
-                fatsInput = mockLog.fats.toString()
-                fiberInput = mockLog.fiber.toString()
-                
-                showCorrectionDialog = true
             }
         }
     }
@@ -166,31 +155,20 @@ fun DietPlanScreen(
             }
         }
 
-        isAnalyzing = true
-        scope.launch {
-            kotlinx.coroutines.delay(2000)
-            isAnalyzing = false
-            
-            // Load mock outputs to correction dialog
-            val mockLog = viewModel.meals.value.firstOrNull() ?: MealLog(
-                foodName = "Chana Masala with 2 Roti",
-                portionSize = "1 Plate",
-                calories = 410,
-                protein = 18,
-                carbs = 58,
-                fats = 8,
-                fiber = 11
-            )
-            
-            foodNameInput = mockLog.foodName
-            portionInput = mockLog.portionSize
-            caloriesInput = mockLog.calories.toString()
-            proteinInput = mockLog.protein.toString()
-            carbsInput = mockLog.carbs.toString()
-            fatsInput = mockLog.fats.toString()
-            fiberInput = mockLog.fiber.toString()
-            
-            showCorrectionDialog = true
+        if (file != null && file.exists()) {
+            val bytes = file.readBytes()
+            isAnalyzing = true
+            viewModel.analyzeMealPhoto(bytes) { result ->
+                isAnalyzing = false
+                foodNameInput = result.foodName
+                portionInput = result.portionSize
+                caloriesInput = result.calories.toString()
+                proteinInput = result.protein.toString()
+                carbsInput = result.carbs.toString()
+                fatsInput = result.fats.toString()
+                fiberInput = result.fiber.toString()
+                showCorrectionDialog = true
+            }
         }
     }
 

@@ -90,22 +90,42 @@ fun SettingsScreen(
                 onValueChange = {
                     keyInput = it
                     viewModel.geminiApiKey.value = it
+                    // Persist to SharedPreferences
+                    context.getSharedPreferences("echofit_prefs", android.content.Context.MODE_PRIVATE)
+                        .edit()
+                        .putString("gemini_api_key", it)
+                        .apply()
                 },
-                placeholder = { Text("Enter Google Gemini API Key", color = TextGray) },
+                placeholder = { Text("Paste your Gemini API Key (AIzaSy... or AQ.)", color = TextGray) },
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = GoldAccent,
-                    unfocusedBorderColor = BorderGray,
+                    focusedBorderColor = if (keyInput.startsWith("AIza") || keyInput.startsWith("AQ.")) SuccessGreen else GoldAccent,
+                    unfocusedBorderColor = if (keyInput.startsWith("AIza") || keyInput.startsWith("AQ.")) SuccessGreen.copy(alpha = 0.5f) else BorderGray,
                     focusedTextColor = TextWhite,
                     unfocusedTextColor = TextWhite
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Used to analyze food/photos. Leave blank to use smart offline mock generators.",
-                style = Typography.labelMedium,
-                color = TextGray
-            )
+            if (keyInput.isNotBlank() && (keyInput.startsWith("AIza") || keyInput.startsWith("AQ."))) {
+                Text(
+                    text = "✓ Valid Gemini API key detected. Echo AI is active!",
+                    style = Typography.labelMedium,
+                    color = SuccessGreen,
+                    fontWeight = FontWeight.Bold
+                )
+            } else if (keyInput.isNotBlank()) {
+                Text(
+                    text = "⚠ Key doesn't look like a valid key (should start with AIzaSy... or AQ.)",
+                    style = Typography.labelMedium,
+                    color = FatYellow
+                )
+            } else {
+                Text(
+                    text = "Get your free key at aistudio.google.com → API Keys. Leave blank for offline mode.",
+                    style = Typography.labelMedium,
+                    color = TextGray
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))

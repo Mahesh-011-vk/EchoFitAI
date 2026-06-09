@@ -78,6 +78,14 @@ dependencies {
     // WorkManager (for Reminders)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
+    // CameraX (Live in-app camera preview & capture)
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("androidx.camera:camera-extensions:$cameraxVersion")
+
     // Image loading (Coil)
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("io.coil-kt:coil-svg:2.5.0")

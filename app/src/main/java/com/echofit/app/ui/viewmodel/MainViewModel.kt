@@ -30,8 +30,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val chatMessages = repository.getChatMessages().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val reminders = repository.getReminders().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // Generative API config
-    var geminiApiKey = MutableStateFlow("AQ.Ab8RN6IYtxEZGSH4RXFx8v3scLiT0jY3tjaJ-L4qFwTaaywi-A")
+    // Generative API config - loaded from SharedPreferences for persistence
+    private val prefs = application.getSharedPreferences("echofit_prefs", android.content.Context.MODE_PRIVATE)
+    var geminiApiKey = MutableStateFlow(prefs.getString("gemini_api_key", "") ?: "")
 
     // Calculations based on loaded profile
     val goalAnalysis: StateFlow<GoalAnalysis?> = userProfile.map { profile ->
@@ -139,6 +140,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deletePhoto(photo: ProgressPhoto) {
         viewModelScope.launch {
             repository.removePhoto(photo)
+        }
+    }
+
+    fun analyzeMealPhoto(imageBytes: ByteArray, onResult: (MealLog) -> Unit) {
+        viewModelScope.launch {
+            val res = repository.analyzeMealPhoto(imageBytes, geminiApiKey.value)
+            onResult(res)
+        }
+    }
+
+    fun analyzeBodyProgress(beforeBytes: ByteArray, afterBytes: ByteArray, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val res = repository.analyzeBodyProgress(beforeBytes, afterBytes, geminiApiKey.value)
+            onResult(res)
         }
     }
 

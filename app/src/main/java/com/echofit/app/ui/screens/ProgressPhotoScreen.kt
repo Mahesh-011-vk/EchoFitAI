@@ -46,6 +46,16 @@ import androidx.compose.ui.graphics.Brush
 import com.echofit.app.ui.theme.*
 import com.echofit.app.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
+private fun getBytesFromUri(context: Context, uriString: String): ByteArray? {
+    return try {
+        val uri = android.net.Uri.parse(uriString)
+        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
 private fun createTempImageFile(context: Context): File {
     val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(java.util.Date())
     val imageFileName = "JPEG_${timeStamp}_"
@@ -76,6 +86,7 @@ fun ProgressPhotoScreen(
     var weightInput by remember { mutableStateOf("") }
     var activePhotoUploadPosition by remember { mutableStateOf<String?>(null) } // "Front", "Side", "Back"
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(false) }
 
     // Gallery picker launcher
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -101,64 +112,12 @@ fun ProgressPhotoScreen(
         }
     }
 
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        val file = tempImageFile
-        val pos = activePhotoUploadPosition ?: "Front"
-        if (success && file != null && file.exists() && file.length() > 0) {
-            capturedPhotoUri?.let { uri ->
-                viewModel.logProgressPhoto(pos, uri.toString())
-            }
-        } else {
-            // Robust fallback for emulator: write a mock colored bitmap to the file so Coil can render it successfully
-            if (file != null) {
-                try {
-                    val bitmap = android.graphics.Bitmap.createBitmap(400, 400, android.graphics.Bitmap.Config.ARGB_8888)
-                    val canvas = android.graphics.Canvas(bitmap)
-                    val paint = android.graphics.Paint()
-                    
-                    // Draw stylish background
-                    paint.color = android.graphics.Color.parseColor("#E6D5C3") // Dark beige/gold tint
-                    canvas.drawRect(0f, 0f, 400f, 400f, paint)
-                    
-                    // Draw text
-                    paint.color = android.graphics.Color.parseColor("#1C1C1E")
-                    paint.textSize = 28f
-                    paint.isAntiAlias = true
-                    paint.textAlign = android.graphics.Paint.Align.CENTER
-                    canvas.drawText("EchoFit Progress", 200f, 180f, paint)
-                    canvas.drawText("[$pos View]", 200f, 230f, paint)
-                    
-                    val out = java.io.FileOutputStream(file)
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
-                    out.flush()
-                    out.close()
-                    
-                    capturedPhotoUri?.let { uri ->
-                        viewModel.logProgressPhoto(pos, uri.toString())
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-
+    // Camera permission launcher - opens CameraScreen on grant
     val requestCameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            try {
-                val file = createTempImageFile(context)
-                tempImageFile = file
-                val uri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
-                capturedPhotoUri = uri
-                takePictureLauncher.launch(uri)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                android.widget.Toast.makeText(context, "Failed to initialize camera file.", android.widget.Toast.LENGTH_SHORT).show()
-            }
+            showCamera = true
         } else {
             android.widget.Toast.makeText(context, "Camera permission is required to capture progress photos.", android.widget.Toast.LENGTH_SHORT).show()
         }
@@ -176,6 +135,22 @@ fun ProgressPhotoScreen(
     // AI Physique Analysis State
     var isAnalyzingPhysique by remember { mutableStateOf(false) }
     var activePhysiqueReportText by remember { mutableStateOf<String?>(null) }
+
+    // --- Full-screen CameraX Live Preview ---
+    if (showCamera) {
+        CameraScreen(
+            position = activePhotoUploadPosition ?: "Front",
+            onPhotoCaptured = { uri ->
+                val pos = activePhotoUploadPosition ?: "Front"
+                viewModel.logProgressPhoto(pos, uri.toString())
+                showCamera = false
+            },
+            onDismiss = {
+                showCamera = false
+            }
+        )
+        return  // Don't render the rest of the screen behind the camera
+    }
 
     Column(
         modifier = Modifier
@@ -625,23 +600,20 @@ fun ProgressPhotoScreen(
         PremiumButton(
             text = "ANALYZE PHYSIQUE TRANSFORMATION",
             onClick = {
-                isAnalyzingPhysique = true
-                scope.launch {
-                    kotlinx.coroutines.delay(2500) // Simulates Vision API compared analysis
-                    isAnalyzingPhysique = false
-                    
-                    // Generate premium assessment comparison output
-                    activePhysiqueReportText = """
-                        ### Echo AI Progress Photo Comparison
-                        
-                        * **Visual Body Fat**: Estimated reduction of ~1.2% visual abdominal fat. High compliance on diet logged.
-                        * **Muscle Definition**: Enhanced shoulder caps and rear delts seen in Side/Back views.
-                        * **Posture Assessment**: Roman back tilt detected. Mobility stretch daily recommended.
-                        
-                        **Echo's Recommendations**:
-                        - Chest development is looking slight, add inclined bench/floor pushups.
-                        - Posture requires stretching: open up chest and work rear-delts.
-                    """.trimIndent()
+                val beforePhoto = photoList.getOrNull(0)
+                val afterPhoto = photoList.getOrNull(1)
+                if (beforePhoto != null && afterPhoto != null) {
+                    val beforeBytes = getBytesFromUri(context, beforePhoto.photoUri)
+                    val afterBytes = getBytesFromUri(context, afterPhoto.photoUri)
+                    if (beforeBytes != null && afterBytes != null) {
+                        isAnalyzingPhysique = true
+                        viewModel.analyzeBodyProgress(beforeBytes, afterBytes) { report ->
+                            isAnalyzingPhysique = false
+                            activePhysiqueReportText = report
+                        }
+                    } else {
+                        android.widget.Toast.makeText(context, "Error reading image files.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
             enabled = activePhotosCount >= 2,
@@ -765,16 +737,7 @@ fun ProgressPhotoScreen(
                                 ) == PackageManager.PERMISSION_GRANTED
 
                                 if (hasCameraPermission) {
-                                    try {
-                                        val file = createTempImageFile(context)
-                                        tempImageFile = file
-                                        val uri = FileProvider.getUriForFile(context, "com.echofit.app.fileprovider", file)
-                                        capturedPhotoUri = uri
-                                        takePictureLauncher.launch(uri)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                        android.widget.Toast.makeText(context, "Failed to initialize camera file.", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
+                                    showCamera = true
                                 } else {
                                     requestCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
                                 }
