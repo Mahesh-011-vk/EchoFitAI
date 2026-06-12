@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd landing-page && npm install && npm run build",
+  "outputDirectory": "landing-page/dist",
+  "cleanUrls": true
+}
