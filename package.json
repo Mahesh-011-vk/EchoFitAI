@@ -1,0 +1,7 @@
+{
+  "name": "echofit-root",
+  "private": true,
+  "scripts": {
+    "build": "cd landing-page && npm install && npm run build"
+  }
+}
