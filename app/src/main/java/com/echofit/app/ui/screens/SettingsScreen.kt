@@ -41,10 +41,8 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val apiKey by viewModel.geminiApiKey.collectAsState()
     val remindersList by viewModel.reminders.collectAsState()
 
-    var keyInput by remember(apiKey) { mutableStateOf(apiKey) }
     var isSyncingCloud by remember { mutableStateOf(false) }
 
     Column(
@@ -72,63 +70,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // API Key Section
-        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.Key, contentDescription = "Key", tint = GoldAccent)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "GEMINI COCHING ENGINE KEY",
-                    style = Typography.labelLarge,
-                    color = GoldAccent,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = keyInput,
-                onValueChange = {
-                    keyInput = it
-                    viewModel.geminiApiKey.value = it
-                    // Persist to SharedPreferences
-                    context.getSharedPreferences("echofit_prefs", android.content.Context.MODE_PRIVATE)
-                        .edit()
-                        .putString("gemini_api_key", it)
-                        .apply()
-                },
-                placeholder = { Text("Paste your Gemini API Key (AIzaSy... or AQ.)", color = TextGray) },
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = if (keyInput.startsWith("AIza") || keyInput.startsWith("AQ.")) SuccessGreen else GoldAccent,
-                    unfocusedBorderColor = if (keyInput.startsWith("AIza") || keyInput.startsWith("AQ.")) SuccessGreen.copy(alpha = 0.5f) else BorderGray,
-                    focusedTextColor = TextWhite,
-                    unfocusedTextColor = TextWhite
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            if (keyInput.isNotBlank() && (keyInput.startsWith("AIza") || keyInput.startsWith("AQ."))) {
-                Text(
-                    text = "✓ Valid Gemini API key detected. Echo AI is active!",
-                    style = Typography.labelMedium,
-                    color = SuccessGreen,
-                    fontWeight = FontWeight.Bold
-                )
-            } else if (keyInput.isNotBlank()) {
-                Text(
-                    text = "⚠ Key doesn't look like a valid key (should start with AIzaSy... or AQ.)",
-                    style = Typography.labelMedium,
-                    color = FatYellow
-                )
-            } else {
-                Text(
-                    text = "Get your free key at aistudio.google.com → API Keys. Leave blank for offline mode.",
-                    style = Typography.labelMedium,
-                    color = TextGray
-                )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
 
         // Daily Reminder Alerts Toggles
         GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {

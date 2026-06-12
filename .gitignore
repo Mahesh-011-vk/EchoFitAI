@@ -1,19 +1,36 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Built artifacts
+build/
+app/build/
+landing-page/dist/
+
+# Gradle files
+.gradle/
+
+# Local developer settings
 local.properties
-*.png
-*.mp4
-*.xml
+
+# Log files
+*.log
+
+# Android Studio / IntelliJ IDEA
 .idea/
+*.iml
+*.ipr
+*.iws
+out/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS/System files
+.DS_Store
+Thumbs.db
+
+# Node.js dependencies
+node_modules/
+landing-page/node_modules/
+
+# Local test / debug recordings and screenshots
+screenshot*.png
+user_video*.mp4
+user_video*.png

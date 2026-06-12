@@ -131,11 +131,11 @@ object GeminiApiClient {
         apiKey: String?
     ): String = withContext(Dispatchers.IO) {
         if (apiKey.isNullOrBlank()) {
-            return@withContext "Hey champion! 🔑 I need your Gemini API Key to unlock full coaching powers. Go to Settings → paste your API key (get one free at aistudio.google.com). Until then, here's my offline tip: drink water, hit your protein, and don't skip leg day!"
+            return@withContext "Hey champion! 🔑 I need your Gemini API Key to unlock full coaching powers. Until then, here's my offline tip: drink water, hit your protein, and don't skip leg day!"
         }
 
         if (!apiKey.startsWith("AIza") && !apiKey.startsWith("AQ.")) {
-            return@withContext "⚠️ Your API key doesn't look right — valid Gemini keys start with 'AIzaSy...' or 'AQ.'. Head to Settings and paste a valid key from aistudio.google.com → API Keys. I'll be ready to coach once that's sorted!"
+            return@withContext "⚠️ Your API key doesn't look right — valid Gemini keys start with 'AIzaSy...' or 'AQ.'. I'll be ready to coach once that's sorted!"
         }
 
         try {
@@ -162,13 +162,13 @@ object GeminiApiClient {
             return@withContext response.text ?: "I'm online but my brain glitched. Try asking again — I promise I'll deliver this time! 💪"
         } catch (e: com.google.ai.client.generativeai.type.InvalidAPIKeyException) {
             e.printStackTrace()
-            return@withContext "🔑 API Key Error: Your Gemini key was rejected. Please check it in Settings. Get a fresh key at aistudio.google.com → API Keys."
+            return@withContext "🔑 API Key Error: Your Gemini key was rejected. Please verify the configured API key."
         } catch (e: Exception) {
             e.printStackTrace()
             val errorMsg = e.message ?: "Unknown error"
             return@withContext when {
                 errorMsg.contains("API key", ignoreCase = true) || errorMsg.contains("401") || errorMsg.contains("403") ->
-                    "🔑 API Key Issue: $errorMsg. Go to Settings and update your Gemini API key."
+                    "🔑 API Key Issue: $errorMsg. Please check your Gemini API key configuration."
                 errorMsg.contains("network", ignoreCase = true) || errorMsg.contains("connect", ignoreCase = true) ->
                     "📡 Network issue: Can't reach the Gemini servers. Check your internet connection and try again!"
                 else ->
@@ -194,7 +194,7 @@ object GeminiApiClient {
             ### Visual Physique Assessment (Echo Local Engine)
             
             > [!TIP]
-            > Enter your Gemini API Key in the Settings page to trigger pixel-level body fat scanning and muscle outline comparison.
+            > Visual physique comparative scanning is available with a configured Gemini API key.
             
             **Local Estimation Report**:
             * **Visual Consistency**: High. Your log history indicates that you are updating files regularly.

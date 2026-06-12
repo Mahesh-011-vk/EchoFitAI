@@ -82,7 +82,7 @@ object OfflineAIEngine {
             ${options.joinToString("\n") { "* **$it**" }}
 
             > [!TIP]
-            > Enter your Gemini API key in the Settings page to allow visual food photo analysis and automatic calorie logging!
+            > Track your food intake consistently under the Diet tab to achieve your daily calorie target!
         """.trimIndent()
     }
 
