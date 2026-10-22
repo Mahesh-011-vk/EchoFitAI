@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd landing-page && npm install && npm run build",
-  "outputDirectory": "landing-page/dist",
+  "buildCommand": "node -e \"const fs=require('fs'),cp=require('child_process'); if(fs.existsSync('landing-page')) { cp.execSync('cd landing-page && npm install && npm run build && cd .. && rm -rf dist && cp -r landing-page/dist dist', {stdio:'inherit'}); } else { cp.execSync('npm run build', {stdio:'inherit'}); }\"",
+  "outputDirectory": "dist",
   "cleanUrls": true
 }

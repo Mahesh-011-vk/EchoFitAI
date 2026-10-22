@@ -1,30 +1,255 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,500;1,600&display=swap');
 
 @import "tailwindcss";
 
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-editorial: 'Cormorant Garamond', Georgia, serif;
+}
+
+:root {
+  --bg-beige: #F8F5EE;
+  --bg-beige-card: #FFFFFF;
+  --bg-beige-subtle: #F3EFE6;
+  --color-burgundy: #721C28;
+  --color-burgundy-dark: #50111A;
+  --color-burgundy-light: #912435;
 }
 
 body {
-  background-color: #f9fafb;
-  background-image: url('./assets/white_silk_bg.png');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  background-color: #F8F5EE;
   margin: 0;
   font-family: var(--font-sans);
   overflow-x: hidden;
+  color: #231815;
+}
+
+/* ========================================================================= */
+/* LIQUID GLASS TABS CAPSULE (EXACT MATCH TO ATTACHED IMAGE)                 */
+/* ========================================================================= */
+.liquid-glass-capsule {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(218, 226, 238, 0.75) 0%,
+    rgba(168, 180, 198, 0.5) 32%,
+    rgba(255, 255, 255, 0.98) 58%,
+    rgba(240, 245, 252, 0.92) 74%,
+    rgba(182, 194, 210, 0.6) 100%
+  );
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 1),
+    inset 0 -1.5px 2px 0 rgba(70, 85, 105, 0.28),
+    0 20px 45px -12px rgba(60, 35, 40, 0.16),
+    0 6px 14px -3px rgba(0, 0, 0, 0.05);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Liquid Frosted Specular Sheen (Upper half reflection from image) */
+.liquid-glass-capsule::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Floating Liquid Glass Tab Item - Active State (Glossy Chrome-Glass Reflection) */
+.liquid-tab-active {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 235, 245, 0.95) 0%,
+    rgba(178, 192, 210, 0.65) 34%,
+    rgba(255, 255, 255, 1) 56%,
+    rgba(242, 246, 252, 0.96) 74%,
+    rgba(192, 204, 222, 0.72) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.98);
+  box-shadow:
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 1),
+    inset 0 -1.5px 2px 0 rgba(60, 75, 95, 0.3),
+    0 10px 25px -5px rgba(114, 28, 40, 0.25),
+    0 4px 10px -2px rgba(0, 0, 0, 0.08);
+  color: #721C28 !important;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.liquid-tab-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 46%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 100%);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  pointer-events: none;
+}
+
+/* Liquid Glass Tab - Idle / Hover State */
+.liquid-tab-idle {
+  color: #4A3D40;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-tab-idle:hover {
+  color: #721C28;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* ========================================================================= */
+/* CLASSIC & AESTHETIC CARDS & SURFACES                                      */
+/* ========================================================================= */
+.classic-card {
+  background-color: #FFFFFF;
+  border: 1px solid rgba(215, 205, 192, 0.75);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    0 14px 34px -10px rgba(65, 45, 35, 0.06);
+}
+
+.classic-card-beige {
+  background-color: #FAF7F2;
+  border: 1px solid rgba(215, 205, 192, 0.7);
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.02),
+    0 10px 26px -8px rgba(65, 45, 35, 0.05);
+}
+
+.classic-card-glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.95),
+    0 16px 36px -12px rgba(65, 45, 35, 0.08);
+}
+
+/* Classic Burgundy Typography and Elements */
+.text-burgundy {
+  color: #721C28;
+}
+
+.bg-burgundy {
+  background-color: #721C28;
+}
+
+.border-burgundy {
+  border-color: #721C28;
+}
+
+.burgundy-pill-badge {
+  background-color: rgba(114, 28, 40, 0.08);
+  color: #721C28;
+  border: 1px solid rgba(114, 28, 40, 0.22);
+}
+
+/* Classic Editorial Serif Helper Classes */
+.font-classic {
+  font-family: var(--font-serif);
+}
+
+.font-editorial {
+  font-family: var(--font-editorial);
+}
+
+/* Glassmorphism Legacy Utilities upgraded for light aesthetic */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(215, 205, 192, 0.75);
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.8),
+    0 16px 36px -12px rgba(65, 45, 35, 0.07);
+  color: #231815;
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 
+    inset 0 2px 2px 0 rgba(255, 255, 255, 0.95),
+    0 16px 32px -10px rgba(65, 45, 35, 0.08);
+  color: #231815;
+}
+
+.glass-pill-blue {
+  background: linear-gradient(180deg, rgba(228, 235, 245, 0.95) 0%, rgba(185, 198, 216, 0.75) 100%);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.95),
+    0 6px 14px -3px rgba(114, 28, 40, 0.18);
+  color: #721C28;
+}
+
+.glass-pill-clear {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(215, 205, 192, 0.6);
+  box-shadow: 
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.6),
+    0 6px 14px -4px rgba(65, 45, 35, 0.05);
+}
+
+/* Aura Glows */
+.lime-aura-blob {
+  background: radial-gradient(circle, rgba(114, 28, 40, 0.15) 0%, rgba(180, 150, 120, 0.12) 45%, transparent 70%);
+  filter: blur(24px);
+}
+
+.lime-aura-blob-intense {
+  background: radial-gradient(circle, rgba(114, 28, 40, 0.25) 0%, rgba(215, 195, 165, 0.2) 50%, transparent 75%);
+  filter: blur(26px);
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes radarSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar-spin {
+  animation: radarSpin 8s linear infinite;
 }
 
 @keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .animate-marquee {

@@ -1,6 +1,7 @@
 # Built artifacts
 build/
 app/build/
+dist/
 landing-page/dist/
 
 # Gradle files
